@@ -68,6 +68,7 @@ $actions += ['contact_preference'=>'Preferensi kontak diperbarui','attachment_ad
                 </section>
             </div>
             <div id="prospectWhatsApp" class="prospect-tab-panel" data-detail-panel>
+<?php if(!empty($conversationPreview)): ?><section class="crm-panel crm-detail-card"><h2>Percakapan pelanggan</h2><p class="crm-footnote">Pesan masuk dan pengiriman CRM untuk nomor prospek ini. Waktu Asia/Jakarta; waktu penerimaan digunakan bila timestamp tidak tersedia.</p><?php $thread=$conversationPreview;$compact=true;require __DIR__.'/../inbox/messages.php'; ?><a class="wa-preview-link" href="<?= e(base_url('inbox').'?lead='.(int)$lead['id']) ?>">Buka percakapan lengkap →</a></section><?php endif ?>
 <section class="crm-panel crm-detail-card">
                 <h2>Pesan WhatsApp</h2>
                 <div class="crm-edit-form">

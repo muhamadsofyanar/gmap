@@ -28,9 +28,9 @@ class InboxHTTP(unittest.TestCase):
         if id: c.open(self.base+f'/test-login?id={id}').close()
         return c
     def test_member_scope_and_xss(self):
-        html=self.client(2).open(self.base+'/inbox').read().decode()
+        html=self.client(2).open(self.base+'/inbox?lead=10').read().decode()
         self.assertIn('Hello &lt;script&gt;',html);self.assertNotIn('<script>alert(1)</script>',html)
-        self.assertIn('Alice lead',html);self.assertIn('Kotak masuk WhatsApp',html)
+        self.assertIn('Alice lead',html);self.assertIn('data-conversation-thread',html)
         other=self.client(3).open(self.base+'/inbox').read().decode()
         self.assertNotIn('Hello &lt;script&gt;',other)
     def test_member_cannot_review_other_prospect(self):
@@ -79,6 +79,44 @@ class InboxHTTP(unittest.TestCase):
         self.assertEqual(ctx.exception.code,422)
         with sqlite3.connect(self.db) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM whatsapp_inbox WHERE message_id='foreign-device'").fetchone()[0],0)
+    def test_shared_crm_shell_and_conversation(self):
+        html=self.client(2).open(self.base+'/inbox').read().decode()
+        self.assertIn('workspace-nav',html)
+        self.assertIn('data-conversation-list',html)
+        self.assertIn('data-conversation-thread',html)
+        self.assertNotIn('Device sha256:',html)
+        self.assertIn('/team/detail/10',html)
+    def test_array_query_is_rejected(self):
+        for query in ['lead[]=10','q[]=bad','page[]=1']:
+            with self.assertRaises(HTTPError) as ctx:self.client(1).open(self.base+'/inbox?'+query)
+            self.assertEqual(ctx.exception.code,422)
+    def test_creation_csrf_required(self):
+        req=Request(self.base+'/inbox/createProspect',data=b'message_id=1&project_id=1&name=Blocked',headers={'Accept':'application/json'})
+        with self.assertRaises(HTTPError) as ctx:self.client(1).open(req)
+        self.assertEqual(ctx.exception.code,403)
+    def test_admin_crm_urls(self):
+        html=self.client(1).open(self.base+'/inbox?lead=10').read().decode()
+        self.assertIn('/crm/detail?id=10#prospectWhatsApp',html)
+        self.assertIn('/crm/detail?id=10',html)
+        self.assertNotIn('/crm/detail/10',html)
+    def test_create_prospect_from_inbox(self):
+        event={'device_id':'123','message_id':'create-http','from':'089999999999','message':'A new contact','is_me':False,'is_group':False,'chat_type':'personal'}
+        req=Request(self.base+'/starsender-webhook.php?token='+'a'*64,data=json.dumps(event).encode(),headers={'Content-Type':'application/json'})
+        self.client().open(req).close()
+        with sqlite3.connect(self.db) as db:anchor=db.execute("SELECT id FROM whatsapp_inbox WHERE message_id='create-http'").fetchone()[0]
+        c=self.client(1);html=c.open(self.base+f'/inbox?conversation={anchor}').read().decode()
+        self.assertIn('Buat prospek',html)
+        token=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        req=Request(self.base+'/inbox/createProspect',data=f'message_id={anchor}&project_id=1&name=HTTP+new+prospect&member_id=2&_csrf_token={token}'.encode())
+        response=c.open(req);self.assertIn('lead=',response.url);self.assertIn('HTTP new prospect',response.read().decode())
+        c.open(req).close()
+        with sqlite3.connect(self.db) as db:self.assertEqual(db.execute("SELECT COUNT(*) FROM project_leads WHERE phone='6289999999999'").fetchone()[0],1)
+    def test_member_create_denied(self):
+        c=self.client(2);html=c.open(self.base+'/inbox').read().decode()
+        token=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        req=Request(self.base+'/inbox/createProspect',data=f'message_id=1&project_id=1&name=Forbidden&member_id=&_csrf_token={token}'.encode(),headers={'Accept':'application/json'})
+        with self.assertRaises(HTTPError) as ctx:c.open(req)
+        self.assertEqual(ctx.exception.code,403)
     def test_login_required(self):
         response=self.client().open(self.base+'/inbox')
         self.assertTrue(response.url.endswith('/login'))

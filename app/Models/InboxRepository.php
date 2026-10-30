@@ -27,7 +27,7 @@ final class InboxRepository
         $q=$this->db->prepare($sql);$q->execute($params);return $q;
     }
 
-    private function actor(array $actor): void
+    public function assertActor(array $actor): void
     {
         $row=$this->query('SELECT role,workspace_id,deleted_at,session_version FROM users WHERE id=?',[$actor['id'] ?? 0])->fetch();
         if (!$row || $row['deleted_at']!==null || (int)$row['workspace_id']!==1
@@ -61,7 +61,7 @@ final class InboxRepository
 
     private function scope(array $actor): array
     {
-        $this->actor($actor);
+        $this->assertActor($actor);
         if ($actor['role']==='admin') return ['(m.lead_id IS NULL OR (l.workspace_id=1 AND p.workspace_id=1))',[]];
         return ['l.workspace_id=1 AND p.workspace_id=1 AND l.assigned_user_id=?',[(int)$actor['id']]];
     }
@@ -88,15 +88,67 @@ final class InboxRepository
 
     public function linkCandidates(array $actor,int $id): array
     {
-        $this->actor($actor);
+        $this->assertActor($actor);
         if ($actor['role']!=='admin') throw new DomainException('Akses admin diperlukan.');
         $phone=$this->query('SELECT contact_phone FROM whatsapp_inbox WHERE id=? AND lead_id IS NULL',[$id])->fetchColumn();
         return $phone ? $this->matches($phone) : [];
     }
 
+    /** Admin creates a CRM prospect from an already authenticated incoming contact. */
+    public function createProspect(array $actor,int $id,int $project,string $name,?int $member): int
+    {
+        $this->assertActor($actor);
+        if ($actor['role']!=='admin') throw new DomainException('Akses admin diperlukan.');
+        $name=trim($name);
+        if ($name==='' || mb_strlen($name)>200) throw new InvalidArgumentException('Isi nama prospek maksimal 200 karakter.');
+        $lock=$this->db->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql' ? ' FOR UPDATE' : '';
+        $contact=$this->query('SELECT contact_phone FROM whatsapp_inbox WHERE id=?',[$id])->fetchColumn();
+        if (!$contact) throw new InvalidArgumentException('Pilih pesan masuk dengan kontak yang diketahui.');
+        $this->db->beginTransaction();
+        try {
+            // Always acquire the oldest row for this phone before any selected anchor.
+            // This serializes creation across anchors and device identities without lock inversion.
+            $this->query('SELECT id FROM whatsapp_inbox WHERE contact_phone=? ORDER BY id LIMIT 1'.$lock,[$contact])->fetch();
+            $this->assertActor($actor);
+            $message=$this->query('SELECT * FROM whatsapp_inbox WHERE id=?'.$lock,[$id])->fetch();
+            if (!$message || !$message['contact_phone'] || $message['direction']!=='incoming') throw new InvalidArgumentException('Pilih pesan masuk dengan kontak yang diketahui.');
+            if ($message['lead_id']!==null) {
+                $existing=$this->query('SELECT l.id FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.id=? AND l.workspace_id=1 AND p.workspace_id=1',[$message['lead_id']])->fetchColumn();
+                if (!$existing) throw new DomainException('Prospek tidak tersedia.');
+                $this->db->commit(); return (int)$existing;
+            }
+            $p=$this->query('SELECT id FROM projects WHERE id=? AND workspace_id=1'.$lock,[$project])->fetchColumn();
+            if (!$p) throw new InvalidArgumentException('Pilih proyek yang tersedia.');
+            if ($member!==null) {
+                $m=$this->query("SELECT id FROM users WHERE id=? AND workspace_id=1 AND role='user' AND deleted_at IS NULL".$lock,[$member])->fetchColumn();
+                if (!$m) throw new InvalidArgumentException('Anggota tidak tersedia.');
+            }
+            if ($this->matches($message['contact_phone'])) throw new InvalidArgumentException('Nomor ini sudah ada pada prospek. Pilih Hubungkan ke prospek.');
+            $now=date('Y-m-d H:i:s');
+            $this->query("INSERT INTO project_leads (project_id,workspace_id,assigned_user_id,shop_name,phone,whatsapp,in_crm,crm_added_at,lead_status,notes,deal_value) VALUES (?,1,?,?,?,?,1,?,'new','',0)",
+                [$project,$member,$name,$message['contact_phone'],$message['contact_phone'],$now]);
+            $lead=(int)$this->db->lastInsertId();
+            $this->query('INSERT INTO crm_lead_sources (lead_id,source) VALUES (?,?)',[$lead,'whatsapp']);
+            $this->query("INSERT INTO crm_funnel_history (lead_id,from_status,to_status,action_type,notes,actor_user_id) VALUES (?,NULL,'new','moved_to_crm',?,?)",[$lead,'Prospek dibuat dari percakapan WhatsApp.',$actor['id']]);
+            $this->persistLink($actor,$message,$lead);
+            $this->query('UPDATE projects SET total_leads=(SELECT COUNT(*) FROM project_leads WHERE project_id=?) WHERE id=?',[$project,$project]);
+            $this->db->commit();return $lead;
+        } catch (\Throwable $e) {if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+    }
+
+    private function persistLink(array $actor,array $message,int $lead): void
+    {
+        $suffix=$this->db->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite'
+            ? ' ON CONFLICT(device_id,contact_phone) DO UPDATE SET lead_id=excluded.lead_id,linked_by=excluded.linked_by,linked_at=excluded.linked_at'
+            : ' ON DUPLICATE KEY UPDATE lead_id=VALUES(lead_id),linked_by=VALUES(linked_by),linked_at=VALUES(linked_at)';
+        $this->query('INSERT INTO whatsapp_inbox_contacts (device_id,contact_phone,lead_id,linked_by,linked_at) VALUES (?,?,?,?,?)'.$suffix,
+            [$message['device_id'],$message['contact_phone'],$lead,$actor['id'],gmdate('Y-m-d H:i:s')]);
+        $this->query('UPDATE whatsapp_inbox SET lead_id=? WHERE device_id=? AND contact_phone=? AND lead_id IS NULL',[$lead,$message['device_id'],$message['contact_phone']]);
+    }
+
     public function link(array $actor,int $id,int $lead): void
     {
-        $this->actor($actor);
+        $this->assertActor($actor);
         if ($actor['role']!=='admin') throw new DomainException('Akses admin diperlukan.');
         $message=$this->query('SELECT * FROM whatsapp_inbox WHERE id=?',[$id])->fetch();
         if (!$message || !$message['contact_phone']) throw new InvalidArgumentException('Kontak penerima belum diketahui.');
@@ -104,14 +156,9 @@ final class InboxRepository
         if (!in_array($lead,array_map('intval',array_column($matches,'id')),true)) throw new InvalidArgumentException('Nomor prospek tidak cocok dengan percakapan.');
         $this->db->beginTransaction();
         try {
-            $this->actor($actor);
-            $suffix=$this->db->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite'
-                ? ' ON CONFLICT(device_id,contact_phone) DO UPDATE SET lead_id=excluded.lead_id,linked_by=excluded.linked_by,linked_at=excluded.linked_at'
-                : ' ON DUPLICATE KEY UPDATE lead_id=VALUES(lead_id),linked_by=VALUES(linked_by),linked_at=VALUES(linked_at)';
-            $this->query('INSERT INTO whatsapp_inbox_contacts (device_id,contact_phone,lead_id,linked_by,linked_at) VALUES (?,?,?,?,?)'.$suffix,
-                [$message['device_id'],$message['contact_phone'],$lead,$actor['id'],gmdate('Y-m-d H:i:s')]);
-            // Preserve prior associations; resolve unlinked messages and future replies.
-            $this->query('UPDATE whatsapp_inbox SET lead_id=? WHERE device_id=? AND contact_phone=? AND lead_id IS NULL',[$lead,$message['device_id'],$message['contact_phone']]);
+            $this->assertActor($actor);
+            $this->persistLink($actor,$message,$lead);
+            $this->query('UPDATE project_leads SET in_crm=1,crm_added_at=COALESCE(crm_added_at,?) WHERE id=? AND workspace_id=1',[date('Y-m-d H:i:s'),$lead]);
             $this->db->commit();
         } catch (\Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); throw $e; }
     }

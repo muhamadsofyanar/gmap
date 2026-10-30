@@ -84,6 +84,7 @@ class CrmController extends Controller
             'search' => $search, 'page' => max(1, min(100000, (int)($_GET['page'] ?? 1)))
         ]));
         $this->view('crm/detail', [
+            'conversationPreview' => (new \App\Models\ConversationRepository(\App\Core\Database::getInstance()))->thread(\App\Services\AuthGuard::identity(),null,$id,1,6),
             'contactBlocked' => \App\Models\ContactPolicy::blocked($lead),
             'contactPreference' => \App\Models\ContactPolicy::preference($lead),
             'attachments' => (new \App\Models\WorkspaceExtras())->attachments($id),

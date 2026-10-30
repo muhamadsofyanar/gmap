@@ -9,9 +9,9 @@ $sections = ['dashboard' => 'Dashboard', 'projects' => 'Proyek', 'crm' => 'CRM',
 $isTeamMember = ($_SESSION['role'] ?? '') === 'user';
 $sections['team'] = 'Tim & penugasan';
 $sections['inbox'] = 'Kotak masuk';
-if ($isTeamMember) $sections = ['team' => 'Prospek saya'];
+if ($isTeamMember) $sections = ['team' => 'Prospek saya','inbox'=>'Kotak masuk'];
 $pageSectionLabel = $sections[$activeSection] ?? ($activeSection === 'profile' ? 'Profil' : 'Dashboard');
-$reminderTotal = $isTeamMember ? 0 : (int)((new \App\Models\SalesModel())->reminderCounts()['total'] ?? 0);
+$reminderTotal = $reminderTotal ?? ($isTeamMember ? 0 : (int)((new \App\Models\SalesModel())->reminderCounts()['total'] ?? 0));
 $appBrand = APP_NAME;
 $accountName = trim($_SESSION['user_name'] ?? 'Pengguna');
 preg_match('/^\X/u', $accountName, $initialMatch);
@@ -51,6 +51,7 @@ $navIcons = [
     <script src="<?= e(base_url('assets/js/csp-actions.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/account.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/extras.js?v=2')) ?>" defer></script>
+<?php if(in_array($activeSection,['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/inbox.css?v=1.3.0')) ?>"><?php endif ?>
 </head>
 <body class="app-shell">
     <a href="#main-content" class="skip-link">Langsung ke konten</a>

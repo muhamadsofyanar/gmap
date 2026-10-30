@@ -44,7 +44,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '')!=='POST') {
 }
 $secret=getenv('STARSENDER_WEBHOOK_TOKEN') ?: '';
 $device=getenv('STARSENDER_DEVICE_ID') ?: '';
-if (!preg_match('/^[a-f0-9]{64}$/D',$secret) || !preg_match('/^[A-Za-z0-9_-]{1,100}$/D',$device)) webhook_response(503,['success'=>false,'message'=>'Webhook belum dikonfigurasi.']);
+if (!preg_match('/^[a-f0-9]{64}$/D',$secret) || !preg_match('/^(?:[A-Za-z0-9_-]{1,100}|sha256:[a-f0-9]{64})$/D',$device)) webhook_response(503,['success'=>false,'message'=>'Webhook belum dikonfigurasi.']);
 $token=$_SERVER['HTTP_X_WEBHOOK_TOKEN'] ?? $_GET['token'] ?? '';
 if (!is_string($token) || !hash_equals($secret,$token)) webhook_response(403,['success'=>false,'message'=>'Akses ditolak.']);
 if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0)>262144) webhook_response(413,['success'=>false,'message'=>'Payload terlalu besar.']);
@@ -55,7 +55,26 @@ try {
     $event=json_decode($body,true,32,JSON_THROW_ON_ERROR);
     if (!is_array($event) || array_is_list($event)) throw new InvalidArgumentException();
     require_once __DIR__.'/../app/Services/StarsenderWebhook.php';
-    $normalized=\App\Services\StarsenderWebhook::normalize($event,$device);
+    $deviceKey=null;
+    $incomingId=$event['device_id'] ?? null;
+    if (is_string($incomingId) && preg_match('/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iD',$incomingId)
+        && !hash_equals($device,$incomingId) && !hash_equals($device,'sha256:'.hash('sha256',$incomingId))) {
+        try {
+            require_once __DIR__.'/../config/config.php';
+            require_once __DIR__.'/../config/database.php';
+            require_once __DIR__.'/../app/Services/GatewaySecret.php';
+            // Read the existing active gateway only; do not migrate or change settings here.
+            $row=\App\Core\Database::getInstance()->query('SELECT provider,enabled,api_key_encrypted FROM whatsapp_gateway WHERE id=1')->fetch();
+            if ($row && $row['provider']==='starsender' && (int)$row['enabled']===1 && is_string($row['api_key_encrypted']) && $row['api_key_encrypted']!=='') {
+                $deviceKey=(new \App\Services\GatewaySecret())->decrypt($row['api_key_encrypted']);
+            }
+        } catch (Throwable $lookupError) {
+            error_log('Starsender gateway identity unavailable: '.get_class($lookupError));
+            webhook_response(503,['success'=>false,'message'=>'Verifikasi perangkat belum tersedia.']);
+        }
+    }
+    $normalized=\App\Services\StarsenderWebhook::normalize($event,$device,$deviceKey);
+    unset($deviceKey);
 } catch (JsonException|InvalidArgumentException $e) {
     // All allowed reasons are constant messages from our validator, never provider values.
     $allowedReasons=['Perangkat tidak sesuai.','Penanda pesan tidak valid.','Jenis pesan tidak valid.',
@@ -65,7 +84,8 @@ try {
     $diagnostic=['reason'=>$reason,'body_bytes'=>strlen($body)];
     if (is_array($event)) {
         $id=$event['device_id'] ?? null;
-        $diagnostic['device_matches']=(is_int($id) || is_string($id)) && (string)$id===$device;
+        $diagnostic['device_matches']=(is_int($id) || is_string($id)) && ((string)$id===$device || hash_equals($device,'sha256:'.hash('sha256',(string)$id)));
+        if ((is_int($id) || is_string($id)) && strlen((string)$id)<=100 && (string)$id!=='') $diagnostic['device_fingerprint']='sha256:'.hash('sha256',(string)$id);
         $diagnostic['fields']=webhook_field_shapes($event);
         if (is_array($event['data'] ?? null)) $diagnostic['nested_data_fields']=webhook_field_shapes($event['data']);
     }

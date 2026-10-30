@@ -14,10 +14,19 @@ final class StarsenderWebhook
         return preg_match('/^[1-9][0-9]{7,14}$/D', $phone) ? $phone : null;
     }
 
-    public static function normalize(array $event, string $device): ?array
+    public static function normalize(array $event, string $device, ?string $deviceKey = null): ?array
     {
         $id = $event['device_id'] ?? null;
-        if ((!is_int($id) && !is_string($id)) || (string)$id !== $device) throw new InvalidArgumentException('Perangkat tidak sesuai.');
+        if ((!is_int($id) && !is_string($id)) || strlen((string)$id)>100 || (string)$id==='') throw new InvalidArgumentException('Perangkat tidak sesuai.');
+        $rawId=(string)$id;
+        $fingerprint='sha256:'.hash('sha256',$rawId);
+        $uuid=preg_match('/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iD',$rawId)===1;
+        $verified=hash_equals($device,$rawId) || hash_equals($device,$fingerprint);
+        // Some webhook identities may be a device key. Trust it only if it exactly
+        // matches the active Starsender gateway key already saved by this admin.
+        if (!$verified && $uuid && is_string($deviceKey) && $deviceKey!=='') $verified=hash_equals($deviceKey,$rawId);
+        if (!$verified) throw new InvalidArgumentException('Perangkat tidak sesuai.');
+        $storedDevice=$uuid || str_starts_with($device,'sha256:') ? $fingerprint : $rawId;
         foreach (['is_group', 'is_me'] as $key) {
             if (isset($event[$key]) && !is_bool($event[$key])) throw new InvalidArgumentException('Penanda pesan tidak valid.');
         }
@@ -28,7 +37,9 @@ final class StarsenderWebhook
         $message = $event['message'] ?? '';
         $name = $event['push_name'] ?? '';
         if (!is_string($message) || mb_strlen($message)>32000 || !is_string($name) || mb_strlen($name)>200) throw new InvalidArgumentException('Isi pesan tidak valid.');
-        $timestamp = $event['timestamp'] ?? null;
+        // Observed Premium callbacks can omit timestamp. Use actual arrival time,
+        // never synthesize a claimed send time. The inbox explains this fallback.
+        $timestamp = $event['timestamp'] ?? time();
         if ((!is_int($timestamp) && !(is_string($timestamp) && preg_match('/^(?:[0-9]{9,10}|[0-9]{12,13})$/D', $timestamp))) || (int)$timestamp<946684800) throw new InvalidArgumentException('Waktu pesan tidak valid.');
         $timestamp = (int)$timestamp;
         if ($timestamp>9999999999) $timestamp=intdiv($timestamp,1000);
@@ -42,7 +53,7 @@ final class StarsenderWebhook
         // The provider documents `from` but no destination for is_me=true. Never infer it.
         $contact=$event['is_me'] ? null : self::phone($event['from'] ?? null);
         if (!$event['is_me'] && $contact===null) throw new InvalidArgumentException('Kontak tidak valid.');
-        return ['device_id'=>$device,'message_id'=>$messageId,'contact_phone'=>$contact,
+        return ['device_id'=>$storedDevice,'message_id'=>$messageId,'contact_phone'=>$contact,
             'direction'=>$event['is_me']?'outgoing':'incoming','push_name'=>$name,
             'message'=>$message,'file_url'=>$file,'sent_at'=>gmdate('Y-m-d H:i:s',$timestamp)];
     }

@@ -1,6 +1,6 @@
 <?php $inboxPage=true; require __DIR__.'/../team/top.php'; ?>
 <section class="card">
-<div class="toolbar"><div><h2>Percakapan Starsender</h2><p>Pesan personal dari webhook · Waktu Asia/Jakarta</p></div><a class="button secondary" href="<?= e(base_url('inbox').'?'.http_build_query(['filter'=>$filter,'lead'=>$leadFilter,'page'=>$page])) ?>">Muat ulang</a></div>
+<div class="toolbar"><div><h2>Percakapan Starsender</h2><p>Pesan personal dari webhook · Waktu Asia/Jakarta. Jika waktu pesan tidak tersedia, ditampilkan waktu penerimaan.</p></div><a class="button secondary" href="<?= e(base_url('inbox').'?'.http_build_query(['filter'=>$filter,'lead'=>$leadFilter,'page'=>$page])) ?>">Muat ulang</a></div>
 <p>Penanda ditinjau berlaku bersama untuk tim. Penanda ini tidak menunjukkan pesan telah dibaca di WhatsApp. Untuk mencatat tindak lanjut, buka detail prospek.</p>
 <form method="get" action="<?= e(base_url('inbox')) ?>" class="toolbar">
 <label>Tampilkan<select name="filter"><option value="all" <?= $filter==='all'?'selected':'' ?>>Semua pesan</option><option value="unread" <?= $filter==='unread'?'selected':'' ?>>Perlu ditinjau</option><?php if($isAdmin): ?><option value="unmatched" <?= $filter==='unmatched'?'selected':'' ?>>Belum terhubung ke prospek</option><?php endif ?></select></label>

@@ -7,6 +7,6 @@ final class TeamAccess
     {
         if (($actor['role'] ?? '') === 'admin') return $controller !== 'LicenseController';
         return ($actor['role'] ?? '') === 'user'
-            && in_array($controller, ['TeamController', 'ProfileController', 'AuthController'], true);
+            && in_array($controller, ['TeamController', 'ProfileController', 'AuthController', 'InboxController'], true);
     }
 }

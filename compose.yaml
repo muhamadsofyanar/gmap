@@ -11,6 +11,8 @@ services:
       APP_URL: ${APP_URL:?Set APP_URL}
       APP_NAME: ${APP_NAME:-Gmap Prospek}
       APP_TIMEZONE: Asia/Jakarta
+      STARSENDER_WEBHOOK_TOKEN: ${STARSENDER_WEBHOOK_TOKEN:-}
+      STARSENDER_DEVICE_ID: ${STARSENDER_DEVICE_ID:-}
       DB_HOST: db
       DB_PORT: "3306"
       DB_NAME: gmap

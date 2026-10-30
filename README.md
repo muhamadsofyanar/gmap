@@ -1,3 +1,7 @@
+# Pembaruan 1.2.0 — Kotak Masuk Starsender Premium
+
+Paket ini melanjutkan versi tim Coolify di bawah. Panduan fitur baru dan pembaruan instalasi: [docs/STARSENDER_INBOX.md](docs/STARSENDER_INBOX.md). Baca bagian tersebut terlebih dahulu jika database versi tim sudah berisi data. Untuk instalasi baru, gunakan panduan dasar di bawah lalu aktifkan webhook opsional.
+
 # Gmap Prospek Web Team untuk Coolify
 
 Versi modifikasi dari paket 1.0.0 yang diberikan pengguna. Satu instalasi untuk satu workspace tim. PHP tetap memakai login; aktivasi lisensi perangkat dan koneksi ke server aktivasi telah dihapus. Gunakan source sesuai hak penggunaan Anda. Paket ini tidak menyertakan license key, konfigurasi Laragon, database lokal, atau kredensial lokal Anda.

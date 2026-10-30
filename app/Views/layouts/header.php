@@ -8,6 +8,7 @@ if (!isset($activeSection)) {
 $sections = ['dashboard' => 'Dashboard', 'projects' => 'Proyek', 'crm' => 'CRM', 'sales' => 'Aktivitas', 'reports' => 'Laporan','templates' => 'Template', 'settings' => 'Pengaturan'];
 $isTeamMember = ($_SESSION['role'] ?? '') === 'user';
 $sections['team'] = 'Tim & penugasan';
+$sections['inbox'] = 'Kotak masuk';
 if ($isTeamMember) $sections = ['team' => 'Prospek saya'];
 $pageSectionLabel = $sections[$activeSection] ?? ($activeSection === 'profile' ? 'Profil' : 'Dashboard');
 $reminderTotal = $isTeamMember ? 0 : (int)((new \App\Models\SalesModel())->reminderCounts()['total'] ?? 0);
@@ -17,6 +18,7 @@ preg_match('/^\X/u', $accountName, $initialMatch);
 $accountInitial = $initialMatch[0] ?? 'P';
 $accountInitial = function_exists('mb_strtoupper') ? mb_strtoupper($accountInitial, 'UTF-8') : strtoupper($accountInitial);
 $navIcons = [
+    'inbox' => 'M3 5h18v14H3z M3 6l9 7 9-7',
     'team' => 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8 M22 21v-2a4 4 0 00-3-3.87',
     'dashboard' => 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
     'projects' => 'M3 7h6l2-3h4l2 3h4v13H3z M3 10h18',

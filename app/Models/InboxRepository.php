@@ -1,0 +1,118 @@
+<?php
+namespace App\Models;
+
+use PDO;
+use DomainException;
+use InvalidArgumentException;
+use App\Services\StarsenderWebhook;
+
+final class InboxRepository
+{
+    public function __construct(private PDO $db) {}
+
+    public static function install(PDO $db): void
+    {
+        $sql=file_get_contents(__DIR__.'/../../database-inbox.sql');
+        if ($sql===false) throw new \RuntimeException('Skema kotak masuk tidak ditemukan.');
+        if ($db->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite') {
+            $sql=str_replace(['BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY','UNIQUE KEY inbox_device_message'], ['INTEGER PRIMARY KEY AUTOINCREMENT','UNIQUE'], $sql);
+            $sql=preg_replace('/,\s*KEY inbox_lead_time \(lead_id,sent_at\)/','',$sql);
+            $sql=str_replace(' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin','',$sql);
+        }
+        $db->exec($sql);
+    }
+
+    private function query(string $sql,array $params=[]): \PDOStatement
+    {
+        $q=$this->db->prepare($sql);$q->execute($params);return $q;
+    }
+
+    private function actor(array $actor): void
+    {
+        $row=$this->query('SELECT role,workspace_id,deleted_at,session_version FROM users WHERE id=?',[$actor['id'] ?? 0])->fetch();
+        if (!$row || $row['deleted_at']!==null || (int)$row['workspace_id']!==1
+            || (int)($actor['workspace_id'] ?? 0)!==1 || !in_array($row['role'],['admin','user'],true)
+            || $row['role']!==($actor['role'] ?? '') || (int)$row['session_version']!==(int)($actor['session_version'] ?? 0)) throw new DomainException('Akses ditolak.');
+    }
+
+    /** Duplicate or ambiguous phone matches are deliberately left for admin review. */
+    private function matches(string $phone): array
+    {
+        // SQL narrows candidates by digit suffix; PHP verifies the full normalized number.
+        $clean=static fn(string $column): string => "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE($column,''),' ',''),'-',''),'(',''),')',''),'.','')";
+        $where=$clean('l.phone').' LIKE ? OR '.$clean('l.whatsapp').' LIKE ?';
+        $rows=$this->query("SELECT l.id,l.phone,l.whatsapp,l.shop_name,p.name AS project_name FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.workspace_id=1 AND p.workspace_id=1 AND ($where)", ['%'.substr($phone,-6),'%'.substr($phone,-6)])->fetchAll();
+        return array_values(array_filter($rows,static fn($r)=>StarsenderWebhook::phone($r['whatsapp'])===$phone || StarsenderWebhook::phone($r['phone'])===$phone));
+    }
+
+    public function ingest(array $event): bool
+    {
+        $matches=$event['contact_phone']!==null ? $this->matches($event['contact_phone']) : [];
+        $lead=count($matches)===1 ? (int)$matches[0]['id'] : null;
+        if ($event['contact_phone']!==null) {
+            $resolved=$this->query('SELECT lead_id FROM whatsapp_inbox_contacts WHERE device_id=? AND contact_phone=?',[$event['device_id'],$event['contact_phone']])->fetchColumn();
+            if ($resolved && in_array((int)$resolved,array_map('intval',array_column($matches,'id')),true)) $lead=(int)$resolved;
+        }
+        $prefix=$this->db->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite'?'INSERT OR IGNORE':'INSERT IGNORE';
+        $q=$this->query("$prefix INTO whatsapp_inbox (device_id,message_id,contact_phone,direction,push_name,message,file_url,sent_at,lead_id,received_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [$event['device_id'],$event['message_id'],$event['contact_phone'],$event['direction'],$event['push_name'],$event['message'],$event['file_url'],$event['sent_at'],$lead,gmdate('Y-m-d H:i:s')]);
+        return $q->rowCount()===1;
+    }
+
+    private function scope(array $actor): array
+    {
+        $this->actor($actor);
+        if ($actor['role']==='admin') return ['(m.lead_id IS NULL OR (l.workspace_id=1 AND p.workspace_id=1))',[]];
+        return ['l.workspace_id=1 AND p.workspace_id=1 AND l.assigned_user_id=?',[(int)$actor['id']]];
+    }
+
+    public function listing(array $actor,string $filter='all',int $page=1,?int $lead=null): array
+    {
+        [$where,$params]=$this->scope($actor);
+        if ($filter==='unread') $where.=" AND m.direction='incoming' AND m.reviewed_at IS NULL";
+        elseif ($filter==='unmatched') $where.=' AND m.lead_id IS NULL';
+        if ($lead!==null) {$where.=' AND m.lead_id=?';$params[]=$lead;}
+        $offset=(max(1,min(100000,$page))-1)*50;
+        return $this->query("SELECT m.*,l.shop_name,l.assigned_user_id,u.name AS assigned_name FROM whatsapp_inbox m LEFT JOIN project_leads l ON l.id=m.lead_id LEFT JOIN projects p ON p.id=l.project_id LEFT JOIN users u ON u.id=l.assigned_user_id WHERE $where ORDER BY m.sent_at DESC,m.id DESC LIMIT 50 OFFSET $offset",$params)->fetchAll();
+    }
+
+    public function review(array $actor,int $id): void
+    {
+        [$where,$params]=$this->scope($actor);$params[]=$id;
+        $found=$this->query("SELECT m.id FROM whatsapp_inbox m LEFT JOIN project_leads l ON l.id=m.lead_id LEFT JOIN projects p ON p.id=l.project_id WHERE $where AND m.id=?",$params)->fetchColumn();
+        if (!$found) throw new DomainException('Pesan tidak ditemukan atau akses ditolak.');
+        // The assignment predicate is repeated in the write so reassignment revokes permission.
+        $whereWrite=$actor['role']==='admin' ? '' : ' AND lead_id IN (SELECT l.id FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.workspace_id=1 AND p.workspace_id=1 AND l.assigned_user_id='.(int)$actor['id'].')';
+        $this->query("UPDATE whatsapp_inbox SET reviewed_at=?,reviewed_by=? WHERE id=?$whereWrite",[gmdate('Y-m-d H:i:s'),$actor['id'],$id]);
+    }
+
+    public function linkCandidates(array $actor,int $id): array
+    {
+        $this->actor($actor);
+        if ($actor['role']!=='admin') throw new DomainException('Akses admin diperlukan.');
+        $phone=$this->query('SELECT contact_phone FROM whatsapp_inbox WHERE id=? AND lead_id IS NULL',[$id])->fetchColumn();
+        return $phone ? $this->matches($phone) : [];
+    }
+
+    public function link(array $actor,int $id,int $lead): void
+    {
+        $this->actor($actor);
+        if ($actor['role']!=='admin') throw new DomainException('Akses admin diperlukan.');
+        $message=$this->query('SELECT * FROM whatsapp_inbox WHERE id=?',[$id])->fetch();
+        if (!$message || !$message['contact_phone']) throw new InvalidArgumentException('Kontak penerima belum diketahui.');
+        $matches=$this->matches($message['contact_phone']);
+        if (!in_array($lead,array_map('intval',array_column($matches,'id')),true)) throw new InvalidArgumentException('Nomor prospek tidak cocok dengan percakapan.');
+        $this->db->beginTransaction();
+        try {
+            $this->actor($actor);
+            $suffix=$this->db->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite'
+                ? ' ON CONFLICT(device_id,contact_phone) DO UPDATE SET lead_id=excluded.lead_id,linked_by=excluded.linked_by,linked_at=excluded.linked_at'
+                : ' ON DUPLICATE KEY UPDATE lead_id=VALUES(lead_id),linked_by=VALUES(linked_by),linked_at=VALUES(linked_at)';
+            $this->query('INSERT INTO whatsapp_inbox_contacts (device_id,contact_phone,lead_id,linked_by,linked_at) VALUES (?,?,?,?,?)'.$suffix,
+                [$message['device_id'],$message['contact_phone'],$lead,$actor['id'],gmdate('Y-m-d H:i:s')]);
+            // Preserve prior associations; resolve unlinked messages and future replies.
+            $this->query('UPDATE whatsapp_inbox SET lead_id=? WHERE device_id=? AND contact_phone=? AND lead_id IS NULL',[$lead,$message['device_id'],$message['contact_phone']]);
+            $this->db->commit();
+        } catch (\Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); throw $e; }
+    }
+}

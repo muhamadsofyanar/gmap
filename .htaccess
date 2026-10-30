@@ -1,0 +1,67 @@
+# ========================================================
+# Root .htaccess - Gmap Prospek
+# Redirection & Core Security Enforcement (PRD Section 3)
+# ========================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 0. Force HTTPS (301). Local development hosts stay on http.
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !^https$ [NC]
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?$ [NC]
+    RewriteCond %{HTTP_HOST} !\.(test|local|localhost)(:[0-9]+)?$ [NC]
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+
+    # 1. Block direct access to sensitive folders (PRD Section 3)
+    RewriteRule ^(app|config|storage|scripts|tests|database)/ - [F,L,NC]
+
+    # 2. Block direct access to sensitive files (PRD Section 3)
+    RewriteRule \.(sql|md|env|json|lock|git.*)$ - [F,L,NC]
+
+    # 3. Rewrite root / empty path to public/index.php
+    RewriteRule ^$ public/index.php?url= [L,QSA]
+
+    # 4. Transparently rewrite all other traffic to public/
+    RewriteCond %{REQUEST_URI} !/public/ [NC]
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+# Block access to hidden files and specific extensions
+<FilesMatch "^\.|\.(sql|md|env|log)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Prevent directory browsing
+Options -Indexes
+
+# HSTS once the browser is on https
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
+    # Static files bypass PHP; PHP responses get the full set (incl. CSP) from App\Services\SecurityHeaders.
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always unset X-Powered-By
+</IfModule>
+
+# Long-lived caching and compression for static assets (Core Web Vitals)
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+</IfModule>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/xml text/xml text/plain image/svg+xml
+</IfModule>

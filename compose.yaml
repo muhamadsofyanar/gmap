@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      APP_ENV: production
+      APP_URL: ${APP_URL:?Set APP_URL}
+      APP_NAME: ${APP_NAME:-Gmap Prospek}
+      APP_TIMEZONE: Asia/Jakarta
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: gmap
+      DB_USER: gmap
+      DB_PASS: ${DB_PASSWORD:?Set DB_PASSWORD}
+      XSENDER_ENCRYPTION_KEY: ${XSENDER_ENCRYPTION_KEY:?Set encryption key}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set admin username}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set admin email}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set admin password}
+    volumes:
+      - app_storage:/var/www/html/storage
+    shm_size: 512mb
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "/var/www/html/scripts/health.php"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: gmap
+      MARIADB_USER: gmap
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+volumes:
+  db_data:
+  app_storage:

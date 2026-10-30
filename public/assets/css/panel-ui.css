@@ -1,0 +1,129 @@
+/* Workspace polish: consistent colours, actions and mobile density across the user panel. Loaded last. */
+.app-shell {
+    --pu-green-900: #053f43;
+    --pu-green-800: #04575c;
+    --pu-green-700: #056b71;
+    --pu-green-300: #9fd1c6;
+    --pu-green-100: #d6ece8;
+    --pu-green-50: #eef6f4;
+    --pu-leaf: #166534;
+    --pu-leaf-50: #dcfce7;
+    --pu-yellow: #f2c94c;
+    --pu-yellow-50: #fff6d6;
+    --pu-yellow-text: #805b00;
+    --pu-red: #b91c1c;
+    --pu-red-50: #fee2e2;
+    --pu-line: #e3e9ee;
+    --pu-muted: #687787;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Page heading */
+.app-content .page-heading { margin-bottom: 4px; }
+.app-content .page-heading .eyebrow { font-size: 11px; letter-spacing: .08em; color: var(--pu-green-700); }
+.app-content .page-heading h1 { font-size: 26px; font-weight: 650; letter-spacing: -.01em; }
+.app-content .crm-back { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+
+/* Buttons: one primary style, one secondary style */
+.app-content .primary-action, .app-content .btn-brand { background: var(--pu-green-700) !important; color: #fff !important; border-color: var(--pu-green-700) !important; border-radius: 8px; font-weight: 600; }
+.app-content .primary-action:hover, .app-content .btn-brand:hover { background: var(--pu-green-800) !important; }
+.app-content .btn-brand svg { color: currentColor !important; }
+.app-content .crm-secondary { border: 1px solid #d3dde5; border-radius: 8px; background: #fff; color: #192a38; font-weight: 500; }
+.app-content .crm-secondary:hover { border-color: var(--pu-green-700); color: var(--pu-green-700); }
+.app-content .table-action { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; font-size: 12px; text-decoration: none; }
+.app-content .primary-action:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Segmented switch (CRM list/pipeline, intake tabs, sales sections) */
+.app-content .crm-view-switch { display: inline-flex; justify-self: start; align-self: flex-start; width: max-content; max-width: 100%; overflow-x: auto; gap: 2px; padding: 3px; border-radius: 8px; background: #eef2f5; border-color: transparent; }
+.app-content .crm-view-switch a { padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #405869; text-decoration: none; }
+.app-content .crm-view-switch a:hover { color: var(--pu-green-700); }
+.app-content .crm-view-switch a[aria-current] { background: #fff; color: var(--pu-green-700); font-weight: 600; box-shadow: 0 1px 2px rgba(25, 42, 56, .12); }
+
+/* Dashboard stats */
+.dashboard-workspace .workspace-stat { position: relative; gap: 6px; padding: 20px 20px 18px; border-top: 3px solid var(--tone, var(--pu-green-700)); }
+.dashboard-workspace .workspace-stat[data-tone="green"] { --tone: var(--pu-green-700); --tone-soft: var(--pu-green-50); }
+.dashboard-workspace .workspace-stat[data-tone="yellow"] { --tone: var(--pu-yellow); --tone-soft: var(--pu-yellow-50); --tone-ink: var(--pu-yellow-text); }
+.dashboard-workspace .workspace-stat[data-tone="red"] { --tone: var(--pu-red); --tone-soft: var(--pu-red-50); }
+.dashboard-workspace .workspace-stat[data-tone="leaf"] { --tone: var(--pu-leaf); --tone-soft: var(--pu-leaf-50); }
+.workspace-stat-icon { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: var(--tone-soft, var(--pu-green-50)); color: var(--tone-ink, var(--tone, var(--pu-green-700))); }
+.dashboard-workspace .workspace-stat > span:not(.workspace-stat-icon) { padding-right: 52px; font-size: 13px; }
+.dashboard-workspace .workspace-stat strong { font-size: 30px; }
+.dashboard-followup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.dashboard-followup-head h2 { margin: 0 0 4px; }
+.dashboard-followup-head .crm-secondary { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; font-size: 13px; text-decoration: none; }
+.dashboard-followup-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.dashboard-followup-tile { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--pu-line); border-left: 4px solid var(--tone); border-radius: 8px; background: #fff; color: #192a38; text-decoration: none; transition: background .15s; }
+.dashboard-followup-tile:hover { background: var(--tone-soft); }
+.dashboard-followup-tile[data-tone="yellow"] { --tone: var(--pu-yellow); --tone-soft: var(--pu-yellow-50); }
+.dashboard-followup-tile[data-tone="red"] { --tone: var(--pu-red); --tone-soft: var(--pu-red-50); }
+.dashboard-followup-tile strong { font-size: 24px; font-weight: 650; line-height: 1; }
+.dashboard-followup-tile span { font-size: 13px; color: #405869; }
+.status-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; background: #eef2f5; color: #405869; }
+
+/* CRM summary as compact stat chips */
+.app-content .crm-workspace > .crm-summary { gap: 10px; }
+.app-content .crm-workspace > .crm-summary > span { display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border: 1px solid var(--pu-line); border-left: 3px solid var(--tone, var(--pu-green-700)); border-radius: 8px; background: #fff; font-size: 13px; }
+.app-content .crm-summary > span[data-tone="yellow"] { --tone: var(--pu-yellow); }
+.app-content .crm-summary > span[data-tone="leaf"] { --tone: var(--pu-leaf); }
+.app-content .crm-workspace > .crm-summary strong { font-size: 18px; margin: 0; }
+
+/* CRM table actions */
+.app-content .crm-table td { vertical-align: middle; }
+.app-content .crm-wa { border-radius: 8px; background: var(--pu-leaf-50); color: var(--pu-leaf); border: 1px solid #bbf7d0; font-weight: 600; }
+.app-content .crm-wa:hover { background: #bbf7d0; }
+.app-content .crm-remove { color: var(--pu-red); }
+.app-content .contact-blocked-label { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: var(--pu-red-50); color: var(--pu-red); font-size: 11px; font-weight: 600; }
+
+/* Project detail: toolbar and row actions */
+.app-content #syncRatingBtn { background: #fff !important; color: #192a38 !important; border-color: #d3dde5 !important; }
+.app-content #syncRatingBtn:hover { border-color: var(--pu-green-700) !important; color: var(--pu-green-700) !important; }
+.app-content #syncRatingBtn #syncRatingIcon { color: currentColor !important; }
+.app-content #checkWaBtn, .app-content #bulkMoveToCrmBtn { background: var(--pu-green-700) !important; border-color: var(--pu-green-700) !important; color: #fff !important; }
+.app-content #checkWaBtn:hover, .app-content #bulkMoveToCrmBtn:hover { background: var(--pu-green-800) !important; }
+.app-content .project-bulk-bar { background: var(--pu-yellow-50); border-color: #f3e1a0; }
+.lead-crm-add, .lead-crm-done { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.lead-crm-add { border: 1px solid var(--pu-green-300); background: #fff; color: var(--pu-green-700); cursor: pointer; transition: background .15s; }
+.lead-crm-add:hover { background: var(--pu-green-50); }
+.lead-crm-add:disabled { opacity: .6; cursor: wait; }
+.lead-crm-done { background: var(--pu-leaf-50); color: var(--pu-leaf); }
+.lead-delete { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: #8a98a5; transition: background .15s, color .15s; }
+.lead-delete:hover { background: var(--pu-red-50); color: var(--pu-red); }
+
+/* Intake tabs */
+.intake-grid.is-tabbed { grid-template-columns: minmax(0, 880px) !important; }
+.intake-grid.is-single { grid-template-columns: minmax(0, 1fr) !important; }
+@media (min-width: 761px) {
+    #intake-manual .crm-edit-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; align-items: end; }
+    #intake-manual .crm-edit-form > label:has([name="notes"]), #intake-manual .crm-edit-form > label:has([name="address"]), #intake-manual .crm-edit-form > button { grid-column: 1 / -1; }
+    #intake-manual .crm-edit-form > button { justify-self: end; }
+}
+.intake-grid [hidden] { display: none !important; }
+.app-content .intake-options { margin-top: 4px; }
+
+/* Sales page */
+.app-content .sales-nav { margin: 0; }
+.sales-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.sales-section-head h2 { margin: 0; }
+.app-content .sales-filter { padding: 0; border: 0; }
+.app-content .sales-filter label { flex: 0 0 220px !important; }
+.app-content .sales-item { border-left: 3px solid var(--pu-green-300); }
+
+/* Mobile: denser CRM cards */
+@media (max-width: 640px) {
+    .app-content .crm-workspace > .crm-summary > span { flex: 1 1 calc(33% - 10px); flex-direction: column; gap: 0; padding: 8px 10px; font-size: 11px; }
+    .dashboard-followup-tiles { grid-template-columns: minmax(0, 1fr); }
+    .app-content .sales-filter label { flex: 1 1 100% !important; }
+    .sales-section-head { align-items: stretch; flex-direction: column; }
+}
+
+/* CRUD tables keep their columns and scroll sideways on small screens instead of stacking into cards. */
+/* An auto grid track would grow to the max-content tab bar and push the page past the viewport. */
+.app-content .crm-workspace { grid-template-columns: minmax(0, 1fr); }
+.crm-table-scroll, .app-content .overflow-x-auto { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.app-content .overflow-x-auto > table { min-width: 760px; }
+@media (max-width: 640px) {
+    .app-content .crm-table th, .app-content .overflow-x-auto > table th { white-space: nowrap; }
+    .app-content .crm-table td:first-child { min-width: 180px; }
+    .app-content .crm-view-switch a { white-space: nowrap; }
+    .app-content .crm-table th { padding: 12px 14px; }
+    .app-content .crm-table td { padding: 12px 14px; }}

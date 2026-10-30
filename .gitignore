@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+config/license.json
+config/gateway_key.php
+storage/
+.venv/
+__pycache__/
+*.pyc
+*.log
+*.bak
+*.dump
+*.sql.gz
+.superpowers/

@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+storage
+.venv
+__pycache__
+**/__pycache__
+**/*.pyc
+config/license.json
+config/gateway_key.php
+tests
+.superpowers
+*.zip
+*.dump
+*.sql.gz

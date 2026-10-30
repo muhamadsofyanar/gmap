@@ -1,0 +1,128 @@
+/* Shared identity for the public store, authentication and customer workspace. */
+:root {
+    --ui-ink: #192a38;
+    --ui-muted: #687787;
+    --ui-brand: #056b71;
+    --ui-hover: #04575c;
+    --ui-line: #e3e9ee;
+    --ui-canvas: #f5f7f9;
+    --ui-surface: #ffffff;
+    --ui-story: #0e3b43;
+    --ui-yellow: #f5e89b;
+    --ui-soft: #eef5f5;
+    --ui-radius: 8px;
+}
+body, body.landing-page {
+    --ink: var(--ui-ink); --muted: var(--ui-muted); --line: var(--ui-line);
+    --brand: var(--ui-brand); --brand-primary: var(--ui-brand); --brand-hover: var(--ui-hover);
+    --brand-dark: var(--ui-hover); --canvas: var(--ui-canvas); --bg: var(--ui-canvas);
+    --paper: var(--ui-canvas); --yellow: var(--ui-yellow);
+    font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); background: var(--canvas);
+    -webkit-font-smoothing: antialiased;
+}
+body.landing-page { --ui-canvas: #ffffff; }
+.landing-page .site-nav { background: var(--ui-surface); border-bottom-color: var(--line); }
+.landing-page .lp-hero { background: var(--ui-surface); }
+.landing-page .lp-benefit-section { background: var(--ui-soft); }
+.landing-page .lp-step, .landing-page .landing-plan, .landing-page .lp-plan-featured, .landing-page .lp-plans-empty {
+    background: var(--ui-surface); border-color: var(--line);
+}
+.app-shell .app-sidebar, .app-shell .app-topbar, .app-shell .crm-panel { background: var(--ui-surface); }
+body .brand-mark, .landing-page .brand-mark, .login-story .brand-mark {
+    width: 39px; height: 39px; flex: 0 0 39px; display: inline-grid; place-items: center;
+    border-radius: var(--ui-radius); background: var(--ui-brand); color: white; border: 0;
+}
+.app-brand, .landing-page .brand { color: var(--ink); }
+.landing-page .btn, .app-content .primary-action, .app-content .btn-brand, .login-form-content button[type=submit] {
+    border-radius: var(--ui-radius); min-height: 44px; background: var(--ui-brand); color: white;
+}
+.landing-page .btn:hover, .app-content .primary-action:hover, .app-content .btn-brand:hover { background: var(--ui-hover); }
+.landing-page .btn.light { background: white; color: var(--ink); border-color: var(--line); }
+.landing-page .btn.lp-yellow { background: var(--ui-yellow); color: var(--ink); }
+.landing-page .btn.lp-yellow:hover { background: #f9edb1; }
+body :focus-visible { outline: 2px solid var(--ui-brand); outline-offset: 3px; }
+body .skip-link { position: fixed; top: -100px; left: 12px; z-index: 100; background: white; color: var(--ink); padding: 12px 16px; border-radius: 8px; }
+body .skip-link:focus { top: 8px; }
+.landing-page .nav-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.landing-page .nav-links .btn { min-height: 44px; }
+.checkout-page .co-form-card label, .checkout-page .co-form-card input:not([type=hidden]):not([type=radio]), .checkout-page .co-form-card select { font-size: 14px; }
+.checkout-page .co-form-card .field-help, .co-section-description, .co-duration-note, .co-bank-option small, .co-submit-area p, .co-activation-note p { font-size: 12px; color: var(--muted); }
+.checkout-page .co-password button { min-height: 36px; top: 11px; font-size: 12px; padding: 8px; }
+.checkout-page .co-submit-area .btn { background: var(--brand); }
+.checkout-page .co-submit-area .btn:hover { background: var(--ui-hover); }
+.co-form-card, .co-summary, .landing-page .landing-plan { border-radius: var(--ui-radius); }
+.purchase-progress { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; list-style: none; padding: 0; margin: 0 0 28px; max-width: 900px; }
+.purchase-progress li { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--muted); font-size: 13px; }
+.purchase-progress li > span { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; background: white; }
+.purchase-progress small { display: block; font-size: 11px; font-weight: 400; margin-top: 2px; }
+.purchase-progress [aria-current] { font-weight: 600; color: var(--ink); }
+.purchase-progress [aria-current] > span { background: var(--brand-primary); border-color: var(--brand-primary); color: white; }
+.purchase-progress .is-complete > span { background: var(--ui-soft); color: var(--brand-primary); }
+.app-shell .nav-item.is-active { background: var(--ui-soft); color: var(--ui-brand); }
+.app-shell .account-avatar { background: var(--ui-soft); color: var(--ui-brand); border-color: var(--line); }
+.billing-status.pending { background: #fbf3cc; color: #72551b; }
+.billing-status { font-size: 12px; line-height: 1.5; }
+.login-story { background: var(--ui-story); color: white; border-right: 0; }
+.login-story .app-brand { color: white; }
+.login-story .app-brand small { color: #9fc2c0; }
+.login-message > p:not(.eyebrow) { color: #a9c4c6; }
+.login-story-footer { color: #89adb0; }
+.login-steps small { color: #93b4b7; }
+.login-message .eyebrow { color: #88c5bb; font-size: 11px; }
+.login-message h1 { font-weight: 650; }
+.login-steps > div > span { background: transparent; border-color: #ffffff26; color: #9ed3c8; }
+.login-steps p { font-size: 14px; }
+.login-steps small, .login-story-footer, .login-copyright { font-size: 12px; }
+.login-description, .login-help { font-size: 14px; color: var(--muted); }
+.login-help a { color: var(--ui-brand); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.login-form-content label { font-size: 14px !important; }
+.login-form-content input { font-size: 16px; height: 48px; }
+.login-form-content button[type=submit] { min-height: 48px; font-size: 14px; }
+.login-context { padding: 12px 16px; border: 1px solid var(--line); background: var(--ui-soft); border-radius: 8px; font-size: 13px; margin-bottom: 24px; }
+.login-password-toggle { min-width: 44px; }
+.landing-page .hero { grid-template-columns: minmax(0,1.04fr) minmax(0,1fr); }
+.landing-page .hero > * { min-width: 0; }
+.landing-page .lp-highlight { white-space: normal; background: linear-gradient(transparent 65%,var(--yellow) 65%,var(--yellow) 92%,transparent 92%); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.landing-page .lp-highlight::after { display: none; }
+@media(max-width:860px) { .landing-page .hero { grid-template-columns: minmax(0,1fr); } }
+@media(max-width:600px) {
+    .purchase-progress { gap: 10px; }
+    .purchase-progress li { flex-direction: column; align-items: flex-start; gap: 7px; font-size: 12px; }
+    .purchase-progress small { font-size: 11px; }
+    .landing-page .brand { font-size: 15px; }
+    .landing-page .nav-links { gap: 8px; flex-wrap: nowrap; flex-shrink: 0; }
+    .landing-page .nav-links .btn { font-size: 12px; padding: 10px; }
+    .checkout-page .co-form-card input:not([type=hidden]):not([type=radio]), .checkout-page .co-form-card select { font-size: 16px; }
+}
+.admin-content .settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+    padding: 6px;
+    border: 1px solid #dce5eb;
+    border-radius: 12px;
+    background: #fff;
+    max-width: 950px;
+}
+.admin-content .settings-tabs a {
+    padding: 12px 18px;
+    border-radius: 8px;
+    color: #526579;
+    text-decoration: none;
+    font-weight: 600;
+}
+.admin-content .settings-tabs a:hover,
+.admin-content .settings-tabs a[aria-current="page"] {
+    background: #e6f5ef;
+    color: #056b71;
+}
+.admin-content .settings-tabs a:focus-visible {
+    outline: 2px solid #056b71;
+    outline-offset: 2px;
+}
+
+/* Consistent payment status colors on billing and invoices. */
+.app-shell .billing-status.pending{background:#fff3cd;color:#805b00}
+.app-shell .billing-status.paid{background:#dcfce7;color:#166534}
+.app-shell .billing-status.cancelled{background:#fee2e2;color:#b91c1c}

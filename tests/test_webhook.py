@@ -25,6 +25,20 @@ class Callback(unittest.TestCase):
         code="$_SERVER['REQUEST_METHOD']='POST';register_shutdown_function(function(){fwrite(STDERR,(string)http_response_code());});require $argv[1];"
         result=subprocess.run(['php','-r',code,str(ROOT/'public/starsender-webhook.php')],env=env,capture_output=True,text=True)
         self.assertEqual(result.stderr,'503');self.assertFalse(json.loads(result.stdout)['success'])
+    def test_rejection_logs_schema_without_values(self):
+        event={'device_id':'123','message_id':'SECRET-MESSAGE-ID','from':'089670177249','message':'PRIVATE_MESSAGE_TEXT','push_name':'PRIVATE_CONTACT_NAME','is_me':'false','is_group':False,'chat_type':'personal','timestamp':int(time.time()),'api_key':'PRIVATE_KEY_VALUE'}
+        self.assertEqual(self.call(json.dumps(event).encode())[0],422)
+        lines=Path('/tmp/gmap-webhook-test.log').read_text().splitlines()
+        diagnostic=[line.split('Starsender webhook rejected: ',1)[1] for line in lines if 'Starsender webhook rejected: ' in line]
+        self.assertTrue(diagnostic,'rejected callback must expose safe diagnostic')
+        info=json.loads(diagnostic[-1])
+        self.assertEqual(info['reason'],'Penanda pesan tidak valid.')
+        self.assertTrue(info['device_matches'])
+        self.assertEqual(info['fields']['is_me']['type'],'string')
+        self.assertEqual(info['fields']['is_me']['shape'],'boolean_false')
+        self.assertEqual(info['fields']['from']['shape'],'phone')
+        for value in ['SECRET-MESSAGE-ID','089670177249','PRIVATE_MESSAGE_TEXT','PRIVATE_CONTACT_NAME','PRIVATE_KEY_VALUE','a'*64]:
+            self.assertNotIn(value,diagnostic[-1])
     def test_wrong_secret(self): self.assertEqual(self.call(token='wrong')[0],403)
     def test_method(self): self.assertEqual(self.call(method='GET')[0],405)
     def test_malformed(self): self.assertEqual(self.call(b'[')[0],422)

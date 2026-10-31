@@ -1,3 +1,7 @@
+# LegaOne v1.7.0
+
+Pembaruan akun klien dengan database terpisah, undangan tim, verifikasi dan pemulihan melalui Starsender/Mailketing. Baca `PANDUAN_UPDATE_v1.7.0.md` sebelum mengaktifkan mode platform. Default tetap nonaktif.
+
 # LegaOne v1.6.0
 
 Perbaikan tema, layout Inbox, pembaruan pesan otomatis, penghubungan ulang nomor, tindak lanjut dan riwayat broadcast. Baca **PANDUAN_UPDATE_v1.6.0.md**.

@@ -1,7 +1,7 @@
 <?php
 // Production secrets are supplied by Coolify, never committed to GitHub.
 if (!defined('APP_NAME')) define('APP_NAME', getenv('APP_NAME') ?: 'Gmap Prospek');
-if (!defined('APP_VERSION')) define('APP_VERSION', '1.6.0');
+if (!defined('APP_VERSION')) define('APP_VERSION', '1.7.0');
 if (!defined('APP_ENV')) define('APP_ENV', getenv('APP_ENV') ?: 'production');
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Asia/Jakarta');
 if (!defined('ROOT_PATH')) define('ROOT_PATH', dirname(__DIR__));

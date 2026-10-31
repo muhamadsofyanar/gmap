@@ -30,6 +30,10 @@ class User
     {
         $name = trim($name);
         $email = trim($email);
+        if(\App\Services\PlatformContext::enabled()){
+            $profile=$this->profile($id);
+            if(!$profile || mb_strtolower($email)!==mb_strtolower($profile['email']))throw new \InvalidArgumentException('Email akun terverifikasi tidak dapat diganti dari profil.');
+        }
         if (!preg_match('/^.{1,100}$/us', $name)) throw new \InvalidArgumentException('Nama wajib diisi, maksimal 100 karakter.');
         if (strlen($email) > 100 || !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new \InvalidArgumentException('Masukkan alamat email yang valid, maksimal 100 karakter.');
         $this->db->beginTransaction();

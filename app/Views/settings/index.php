@@ -1,3 +1,4 @@
+<?php if(\App\Services\PlatformContext::enabled()): ?><nav class="crm-detail-actions" aria-label="Pengaturan akun"><a class="crm-secondary" href="<?= e(base_url('account')) ?>">Akun &amp; undangan tim</a><a class="crm-secondary" href="<?= e(base_url('callback')) ?>">Callback workspace</a><?php $platformActor=\App\Services\PlatformContext::current();if($platformActor && (int)$platformActor['is_platform_admin']): ?><a class="primary-action" href="<?= e(base_url('account/settings')) ?>">Pendaftaran &amp; notifikasi platform</a><?php endif ?></nav><?php endif ?>
 <section class="crm-workspace">
     <header class="page-heading"><div><p class="eyebrow">KONFIGURASI APLIKASI</p><h1>Pengaturan</h1><p>Kelola koneksi layanan untuk aktivitas CRM.</p></div></header>
     <?php $settingsTab='gateway'; require __DIR__.'/tabs.php'; ?>

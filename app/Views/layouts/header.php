@@ -1,7 +1,7 @@
 <?php
 $navigationPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
 if (!isset($activeSection)) {
-    $activeSection = preg_match('~/(dashboard|projects|crm|sales|reports|templates|settings|profile)(?:/|$)~', $navigationPath, $navigationMatch)
+    $activeSection = preg_match('~/(dashboard|projects|crm|sales|reports|templates|settings|profile|account|callback)(?:/|$)~', $navigationPath, $navigationMatch)
         ? $navigationMatch[1]
         : 'dashboard';
 }
@@ -9,6 +9,7 @@ $sections = ['dashboard' => 'Dashboard', 'projects' => 'Proyek', 'crm' => 'CRM',
 $isTeamMember = ($_SESSION['role'] ?? '') === 'user';
 $sections['team'] = 'Tim & penugasan';
 $sections['inbox'] = 'Kotak masuk';
+if(\App\Services\PlatformContext::enabled()){$sections['account']='Akun & tim';$navIconsAccount=true;}
 if ($isTeamMember) $sections = ['team' => 'Prospek saya','inbox'=>'Kotak masuk'];
 $pageSectionLabel = $sections[$activeSection] ?? ($activeSection === 'profile' ? 'Profil' : 'Dashboard');
 $reminderTotal = $reminderTotal ?? ($isTeamMember ? 0 : (int)((new \App\Models\SalesModel())->reminderCounts()['total'] ?? 0));
@@ -18,6 +19,7 @@ preg_match('/^\X/u', $accountName, $initialMatch);
 $accountInitial = $initialMatch[0] ?? 'P';
 $accountInitial = function_exists('mb_strtoupper') ? mb_strtoupper($accountInitial, 'UTF-8') : strtoupper($accountInitial);
 $navIcons = [
+    'account'=>'M12 12a4 4 0 100-8 4 4 0 000 8 M4 21v-2a8 8 0 0116 0v2',
     'inbox' => 'M3 5h18v14H3z M3 6l9 7 9-7',
     'team' => 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8 M22 21v-2a4 4 0 00-3-3.87',
     'dashboard' => 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -30,7 +32,7 @@ $navIcons = [
 ];
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-workspace="<?= (int)($_SESSION['tenant_id']??1) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,7 +57,7 @@ $navIcons = [
     <script src="<?= e(base_url('assets/js/account.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/extras.js?v=2')) ?>" defer></script>
 <?php if(in_array($activeSection,['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/inbox.css?v=1.4.0')) ?>"><?php endif ?>
-<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?><link rel="stylesheet" href="<?= e(base_url('assets/css/appearance.css?v=1.6.0')) ?>">
+<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?><link rel="stylesheet" href="<?= e(base_url('assets/css/appearance.css?v=1.7.0')) ?>">
 <script src="<?= e(base_url('assets/js/appearance.js?v=1.5.0')) ?>" defer></script>
 </head>
 <body class="app-shell">

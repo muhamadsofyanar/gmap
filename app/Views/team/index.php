@@ -17,10 +17,12 @@
 <div class="toolbar pagination"><?php if($page>1): ?><a href="<?= e(base_url('team').'?'.http_build_query(['q'=>$search,'page'=>$page-1])) ?>">Sebelumnya</a><?php endif ?><span>Halaman <?= $page ?></span><?php if(count($leads)===50): ?><a href="<?= e(base_url('team').'?'.http_build_query(['q'=>$search,'page'=>$page+1])) ?>">Berikutnya</a><?php endif ?></div>
 </section>
 <?php if($isAdmin): ?>
+<?php if(\App\Services\PlatformContext::enabled()): ?><section class="card"><h2>Undang anggota</h2><p>Anggota membuat kata sandinya sendiri setelah menerima undangan terverifikasi.</p><a class="button" href="<?= e(base_url('account')) ?>">Buka akun &amp; undangan</a></section><?php else: ?>
 <section class="card"><h2>Tambah anggota</h2><p>Akun anggota hanya dapat mengakses prospek penugasannya. Password minimal 12 karakter.</p>
 <form method="post" action="<?= e(base_url('team/createMember')) ?>" class="grid-form"><?= csrf_field() ?>
 <label>Nama<input name="name" required maxlength="100" autocomplete="off"></label><label>Username<input name="username" required pattern="[a-zA-Z0-9_.-]{3,50}" maxlength="50" autocomplete="off"></label>
 <label>Email<input type="email" name="email" required maxlength="100" autocomplete="off"></label><label>Password awal<input type="password" name="password" minlength="12" maxlength="72" required autocomplete="new-password"></label><button>Buat akun anggota</button></form></section>
+<?php endif ?>
 <section class="card"><h2>Akun anggota</h2><p>Menonaktifkan akun akan mencabut sesi dan mengembalikan prospeknya ke antrean admin.</p>
 <?php foreach($members as $member): ?><article class="member"><div><strong><?= e($member['name']) ?></strong><p><?= e($member['username']) ?> · <?= e($member['email']) ?> · <?= $member['deleted_at']===null?'Aktif':'Nonaktif' ?></p></div>
 <?php if($member['deleted_at']===null): ?><div class="member-actions"><form method="post" action="<?= e(base_url('team/resetPassword')) ?>"><?= csrf_field() ?><input type="hidden" name="member_id" value="<?= (int)$member['id'] ?>"><label>Password baru<input type="password" name="password" minlength="12" maxlength="72" required autocomplete="new-password"></label><button class="secondary">Reset password</button></form>

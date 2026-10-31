@@ -9,6 +9,7 @@ try {
     try {
         Installer::schema($db,ROOT_PATH.'/database.sql');
         Installer::bootstrapAdmin($db,getenv());
+        if(\App\Services\PlatformContext::enabled())\App\Services\PlatformInstaller::install($db);
     } finally { $db->query("SELECT RELEASE_LOCK('gmap_team_install')"); }
     echo "Schema dan akun awal siap. Akun yang sudah ada tidak direset.\n";
 } catch(Throwable $e) {fwrite(STDERR,'Instalasi gagal: '.$e->getMessage()."\n");exit(1);}

@@ -1,5 +1,8 @@
 <section class="crm-workspace profile-workspace">
     <header class="page-heading"><div><p class="eyebrow">AKUN SAYA</p><h1>Profil</h1><p>Kelola identitas akun dan keamanan password Anda.</p></div></header>
+    <?php if(\App\Services\PlatformContext::enabled()): ?>
+    <p class="crm-footnote">Alamat email terdaftar dipertahankan untuk keamanan akun. Untuk akun lama, <a href="<?= e(base_url('account/resend')) ?>">verifikasi tujuan pemulihan</a> selagi Anda masih masuk, agar fitur lupa password dapat digunakan.</p>
+    <?php endif; ?>
     <div class="profile-grid">
         <section class="crm-panel crm-detail-card">
             <h2>Informasi profil</h2>

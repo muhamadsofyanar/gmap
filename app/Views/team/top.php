@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= e($title) ?> · <?= e(APP_NAME) ?></title><link rel="stylesheet" href="<?= e(base_url('assets/css/team.css')) ?>"></head>
 <body><header><a class="brand" href="<?= e(base_url('team')) ?>"><?= e(APP_NAME) ?></a><nav>
+<?php if($isAdmin && \App\Services\PlatformContext::enabled()): ?><a href="<?= e(base_url('account')) ?>">Akun &amp; undangan</a><?php endif ?>
 <?php if($isAdmin): ?><a href="<?= e(base_url('dashboard')) ?>">Dashboard admin</a><?php endif ?>
 <a href="<?= e(base_url('inbox')) ?>">Kotak masuk</a><a href="<?= e(base_url('team')) ?>"><?= $isAdmin?'Tim & penugasan':'Prospek saya' ?></a><a href="<?= e(base_url('profile')) ?>">Profil</a>
 <form method="post" action="<?= e(base_url('logout')) ?>"><?= csrf_field() ?><button class="secondary">Keluar</button></form></nav></header>

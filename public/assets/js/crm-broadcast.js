@@ -17,7 +17,7 @@
     const close = document.getElementById('crmBroadcastCancel');
     const notice = document.getElementById('crmBroadcastNotice');
     const templates = JSON.parse(document.getElementById('crmTemplatesData').textContent);
-    const storageKey = `crm-broadcast:${workspace.dataset.api}:${prepare.dataset.project}`;
+    const storageKey = `crm-broadcast:${document.documentElement.dataset.workspace || 1}:${workspace.dataset.api}:${prepare.dataset.project}`;
     let batch = null, running = false, stop = false;
     const selected=new Set();let recipients=[],loaded=false,loading=false,composeInitialized=false;
     const recipientList=document.getElementById('broadcastRecipientList');

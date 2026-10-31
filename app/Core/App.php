@@ -89,7 +89,7 @@ class App
             return;
         }
 
-        \App\Services\AuthGuard::guard($this->controller);
+        \App\Services\AuthGuard::guard($this->controller,$this->method);
         $controllerInstance = new $controllerClass();
 
         // Check if method exists

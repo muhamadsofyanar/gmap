@@ -33,7 +33,7 @@ class AuthController extends Controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->validateCsrf();
 
-            if (!\App\Services\RateLimit::allow('login', 20, 900)) {
+            if (!\App\Services\PlatformContext::enabled() && !\App\Services\RateLimit::allow('login', 20, 900)) {
                 set_flash('error', 'Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.');
                 $this->redirect($loginPath);
             }
@@ -47,13 +47,20 @@ class AuthController extends Controller
             }
 
             // Per-account limit shared across IPs, so a distributed attack cannot brute-force one login.
-            if (!\App\Services\RateLimit::allow('login-account|' . mb_strtolower($identifier), 10, 900, false)) {
+            if (!\App\Services\PlatformContext::enabled() && !\App\Services\RateLimit::allow('login-account|' . mb_strtolower($identifier), 10, 900, false)) {
                 set_flash('error', 'Terlalu banyak percobaan masuk untuk akun ini. Coba lagi dalam 15 menit.');
                 $this->redirect($loginPath);
             }
 
             // Authenticate user credentials
-            $user = $this->userModel->authenticate($identifier, $password);
+            try {
+            $user = \App\Services\PlatformContext::enabled()
+                ? (new \App\Services\PlatformAccounts())->authenticate($identifier, $password)
+                : $this->userModel->authenticate($identifier, $password);
+            } catch (\DomainException $e) {
+                set_flash('error', $e->getMessage());
+                $this->redirect($loginPath);
+            }
 
             if ($user) {
                 // Initialize admin session
@@ -63,6 +70,10 @@ class AuthController extends Controller
                 session_regenerate_id(true);
                 unset($_SESSION['_csrf_token']); // fresh anti-CSRF token for the authenticated session
 
+                if (\App\Services\PlatformContext::enabled()) {
+                    $_SESSION['tenant_id'] = (int)$user['tenant_id'];
+                    $_SESSION['platform_account_id'] = (int)$user['platform_account_id'];
+                }
                 $_SESSION['user_id'] = (int)$user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['user_name'] = $user['name'];

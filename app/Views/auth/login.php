@@ -54,6 +54,10 @@
                     </div>
                     <button type="submit" class="auth-submit">Masuk ke workspace <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
                 </form>
+                <?php if (\App\Services\PlatformContext::enabled()): ?>
+                <p class="auth-description"><a href="<?= e(base_url('account/forgot')) ?>">Lupa kata sandi?</a> · <a href="<?= e(base_url('account/register')) ?>">Daftar workspace</a></p>
+                <p class="auth-description"><a href="<?= e(base_url('account/resend')) ?>">Kirim ulang verifikasi</a></p>
+                <?php endif; ?>
             </div>
             <p class="login-copyright">&copy; <?= date('Y') ?> <?= e($loginBrand) ?>. Workspace bisnis.</p>
         </section>

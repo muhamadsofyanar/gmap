@@ -115,4 +115,4 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
 
 <script id="crmTemplatesData" type="application/json"><?= json_encode($templates, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?></script>
 <script src="<?= base_url('assets/js/crm.js?v=free-1.4') ?>" defer></script>
-<script src="<?= base_url('assets/js/crm-broadcast.js?v=1.6.0') ?>" defer></script>
+<script src="<?= base_url('assets/js/crm-broadcast.js?v=1.7.0') ?>" defer></script>

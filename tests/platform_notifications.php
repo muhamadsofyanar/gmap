@@ -1,0 +1,72 @@
+<?php
+require __DIR__.'/bootstrap.php';
+require __DIR__.'/../config/database.php';
+use App\Models\PlatformSettings;
+use App\Services\NotificationService;
+putenv('XSENDER_ENCRYPTION_KEY='.base64_encode(str_repeat('k',32)));
+if (!defined('APP_ENV')) define('APP_ENV','production');
+if (!defined('CONFIG_PATH')) define('CONFIG_PATH',__DIR__.'/../config');
+$db=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+$db->exec('CREATE TABLE platform_settings(id INTEGER PRIMARY KEY,payload TEXT); CREATE TABLE platform_notification_log(id INTEGER PRIMARY KEY AUTOINCREMENT,account_id INTEGER,purpose TEXT,channel TEXT,destination_masked TEXT,status TEXT,http_code INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
+check(class_exists(PlatformSettings::class),'platform settings implementation exists');
+$settings=new PlatformSettings($db);
+check($settings->get()['registration_enabled']===0,'public registration defaults off');
+check($settings->get()['approval_required']===0,'approval defaults off');
+check($settings->get()['channel']==='mailketing','default channel mailketing');
+$settings->save(['mailketing_api_key'=>'secret-mail','starsender_api_key'=>'secret-wa','from_email'=>'sender@example.test','from_name'=>'LegaOne','admin_email'=>'admin@example.test','admin_phone'=>'081234567890']);
+$stored=$db->query('SELECT payload FROM platform_settings')->fetchColumn();
+check(!str_contains($stored,'secret-mail')&&!str_contains($stored,'secret-wa'),'API keys encrypted at rest');
+check($settings->get()['mailketing_api_key']==='secret-mail','keys decrypt internally');
+$public=$settings->publicSettings();
+check($public['mailketing_api_key']==='' && $public['starsender_api_key']==='' && $public['mailketing_api_key_configured']===true,'public settings never include keys');
+$settings->save($public);
+check($settings->get()['mailketing_api_key']==='secret-mail','blank public key preserves saved key');
+expectDenied(fn()=>$settings->save(['from_email'=>"bad@example.test\r\nBcc:x@evil.test"]),'header injection rejected');
+expectDenied(fn()=>$settings->save(['channel'=>'http://evil.test']),'only fixed providers accepted');
+expectDenied(fn()=>$settings->save(['registration_enabled'=>'arbitrary']),'invalid booleans rejected');
+expectDenied(fn()=>$settings->save(['templates'=>['reset'=>'{unknown}']]),'unknown template variables rejected');
+expectDenied(fn()=>$settings->save(['templates'=>['verification'=>str_repeat('x',8001)]]),'large template rejected');
+
+class CapturingNotifications extends NotificationService {
+    public array $requests=[];
+    public array $response=[200,'{"success":true}',0];
+    protected function mailketingTransport(array $config,array $payload):array { $this->requests[]=['mailketing',$config,$payload];return $this->response; }
+    protected function starsenderTransport(array $credentials,string $number,string $body):array { $this->requests[]=['starsender',$credentials,$number,$body];return ['status'=>'accepted','http_code'=>200]; }
+}
+$service=new CapturingNotifications($db,$settings);
+check($service->ready('mailketing')&&$service->ready('starsender'),'configured providers ready');
+check(!$service->ready('evil'),'unknown provider never ready');
+$settings->save(['templates'=>['reset'=>'Halo {name}, {app_name}.','registration'=>'Pendaftaran {name} {link}']]);
+$url='https://legaone.example/reset?token=RAW_TOKEN';
+$result=$service->send(['email'=>'alice@example.test','name'=>'<Alice>','account_id'=>4,'channel'=>'mailketing'],'reset',$url);
+check($result===['status'=>'accepted','http_code'=>200],'documented success means accepted');
+$request=$service->requests[0];
+check(array_keys($request[2])===['from_name','from_email','subject','recipient','content'],'Mailketing payload exact documented keys');
+check(str_contains($request[2]['content'],$url)&&str_contains($request[2]['content'],'&lt;Alice&gt;'),'missing template link appended and HTML escaped');
+$service->response=[200,'{"success":"true","body":"RAW_TOKEN"}',0];
+check($service->send(['email'=>'alice@example.test'],'verification',$url)['status']==='unknown','string true is not accepted');
+$service->response=[400,'{"success":true}',0];
+check($service->send(['email'=>'alice@example.test'],'invite',$url)['status']==='failed','HTTP error cannot be accepted');
+$service->response=[200,'{"success":false}',0];
+check($service->send(['email'=>'alice@example.test'],'reset',$url)['status']==='failed','explicit false fails');
+$service->response=[0,false,28];
+check($service->send(['email'=>'alice@example.test'],'reset',$url)['status']==='unknown','timeout ambiguous, never auto retry');
+$service->send(['phone'=>'081234567890','name'=>'Alice','channel'=>'starsender'],'invite',$url);
+$wa=end($service->requests);
+check($wa[1]===['api_key'=>'secret-wa']&&$wa[2]==='6281234567890'&&str_contains($wa[3],$url),'WhatsApp uses global key and normalized destination');
+$service->send(['email'=>'alice@example.test','name'=>'Alice'],'registration',$url);
+$registration=end($service->requests);
+check(!str_contains($registration[2]['content'],'RAW_TOKEN')&&!str_contains($registration[2]['content'],$url),'registration never leaks recovery URL');
+$before=count($service->requests);
+expectDenied(fn()=>$service->send(['email'=>'alice@example.test'],'broadcast',$url),'unsupported purpose rejected');
+expectDenied(fn()=>$service->send(['email'=>'alice@example.test'],'reset','javascript:alert(1)'),'unsafe link rejected');
+expectDenied(fn()=>$service->send(['email'=>"a@example.test\nBcc:x@evil.test"],'reset',$url),'invalid destination rejected');
+check(count($service->requests)===$before,'invalid sends never call provider');
+$service->response=[200,'{"success":true}',0];
+check($service->sendTest('mailketing','test@example.test')['status']==='accepted','explicit test supported');
+$logs=json_encode($db->query('SELECT * FROM platform_notification_log')->fetchAll());
+foreach (['RAW_TOKEN','secret-mail','secret-wa','alice@example.test','6281234567890',$url] as $s) check(!str_contains($logs,$s),'logs omit sensitive data '.$s);
+check(str_contains($logs,'a***@example.test'),'email logged masked');
+$emptyDb=new PDO('sqlite::memory:');$emptyDb->exec('CREATE TABLE platform_settings(id INTEGER PRIMARY KEY,payload TEXT)');
+check(!(new NotificationService($emptyDb,new PlatformSettings($emptyDb)))->ready('mailketing'),'unconfigured provider not ready');
+echo "Platform notifications: $checks checks passed\n";

@@ -258,7 +258,9 @@ final class TeamRepository
 
     public function createMember(string $username,string $email,string $name,string $password): int
     {
-        $this->admin(); self::validatePassword($password);
+        $this->admin();
+        if(\App\Services\PlatformContext::enabled())throw new InvalidArgumentException('Gunakan Undang anggota pada menu Akun & tim agar akun terverifikasi.');
+        self::validatePassword($password);
         $username=trim($username);$email=trim($email);$name=trim($name);
         if (!preg_match('/^[a-zA-Z0-9_.-]{3,50}$/D',$username) || !filter_var($email,FILTER_VALIDATE_EMAIL) || strlen($email)>100 || $name==='' || strlen($name)>100) throw new InvalidArgumentException('Nama, username, atau email tidak valid.');
         return $this->transaction(function() use($username,$email,$name,$password):int {

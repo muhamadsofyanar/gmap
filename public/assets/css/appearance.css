@@ -147,3 +147,31 @@
 [data-theme=dark] .app-shell table tbody tr:nth-child(even) { background:var(--ui-canvas)!important; }
 [data-theme=dark] .app-shell table tbody tr:hover { background:var(--row-hover)!important; }
 .dashboard-followup-tile[data-tone=green] { --tone:var(--ui-brand); --tone-soft:var(--ui-soft); }
+
+/* Account administration uses the same workspace surfaces, without a UI framework. */
+.account-admin { max-width:1100px; margin:0 auto; display:grid; gap:20px; }
+.account-admin h1 { font-size:28px; font-weight:700; letter-spacing:-.03em; }
+.account-admin h2 { font-size:18px; font-weight:650; margin:0 0 12px; }
+.account-admin > p,.account-admin .text-muted { color:var(--ui-muted); font-size:13px; line-height:1.6; }
+.account-admin .card { background:var(--ui-surface); border:1px solid var(--ui-line); border-radius:14px; overflow:hidden; }
+.account-admin .card-body { padding:24px; }
+.account-admin .row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:end; }
+.account-admin .row > * { min-width:0; }
+.account-admin .form-label,.account-admin label { font-size:13px; font-weight:600; display:block; margin:8px 0; }
+.account-admin .form-control,.account-admin .form-select { display:block; width:100%; min-height:44px; padding:11px 12px; border:1px solid var(--ui-line); border-radius:9px; background:var(--ui-surface); color:var(--ui-ink); font-size:14px; }
+.account-admin textarea.form-control { resize:vertical; }
+.account-admin .form-check { display:flex; align-items:center; gap:9px; }
+.account-admin .form-check input { width:18px; height:18px; accent-color:var(--ui-brand); }
+.account-admin .btn { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; border:1px solid var(--ui-line); border-radius:9px; cursor:pointer; margin-top:12px; font-size:13px; font-weight:650; }
+.account-admin .btn-primary { background:var(--ui-brand); color:#fff; }
+.account-admin .btn-outline-primary { background:var(--ui-soft); color:var(--ui-brand); }
+.account-admin .btn-outline-danger { background:transparent; color:#b54736; }
+.account-admin .table-responsive { overflow:auto; }
+.account-admin .table { width:100%; }
+.account-admin .table th,.account-admin .table td { white-space:normal; overflow-wrap:anywhere; }
+.account-admin .mt-4 { margin-top:24px; }
+.account-admin .mb-3 { margin-bottom:16px; }
+.account-admin .alert { padding:13px 16px; border:1px solid var(--ui-line); border-radius:10px; background:var(--ui-soft); }
+[data-theme=dark] .account-admin .btn-primary { color:#102b2b; }
+[data-theme=dark] .account-admin .btn-outline-danger { color:#ffb6aa; }
+@media(max-width:650px){.account-admin .row{grid-template-columns:minmax(0,1fr)}.account-admin .card-body{padding:16px}.account-admin :is(input,textarea,select){font-size:16px!important}}

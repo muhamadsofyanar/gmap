@@ -35,12 +35,19 @@ class CrmModel
             COALESCE(SUM(lead_status='new'),0) AS uncontacted,
             COALESCE(SUM(lead_status IN ('contacted','interested','negotiation')
                 AND COALESCE(follow_up_count,0)=0 AND last_follow_up IS NULL),0) AS awaiting_follow_up,
+            COALESCE(SUM(lead_status IN ('contacted','interested','negotiation') AND NOT EXISTS (SELECT 1 FROM crm_tasks t WHERE t.lead_id=l.id AND t.completed_at IS NULL)),0) AS unscheduled_active,
             COALESCE(SUM(lead_status='closing'),0) AS closing,
             COALESCE(SUM(CASE WHEN lead_status='closing' THEN deal_value ELSE 0 END),0) AS closing_value
-            FROM project_leads WHERE in_crm=1")->fetch();
+            FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.in_crm=1 AND l.workspace_id=1 AND p.workspace_id=1")->fetch();
         $stats = array_map('intval', $row);
         $stats['closing_value'] = (float)$row['closing_value'];
         return $stats;
+    }
+
+    public function unscheduledActive(int $page=1): array
+    {
+        $offset=(max(1,min(100000,$page))-1)*50;
+        return $this->db->query("SELECT l.id,l.shop_name,l.lead_status,p.name AS project_name FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.workspace_id=1 AND p.workspace_id=1 AND l.in_crm=1 AND l.lead_status IN ('contacted','interested','negotiation') AND NOT EXISTS (SELECT 1 FROM crm_tasks t WHERE t.lead_id=l.id AND t.completed_at IS NULL) ORDER BY l.updated_at,l.id LIMIT 51 OFFSET $offset")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function getProjectOverview(string $search = '', ?string $status = null): array

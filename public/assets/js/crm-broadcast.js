@@ -212,6 +212,12 @@
 
     let saved;
     try { saved = localStorage.getItem(storageKey); } catch (_) {}
+    const requested=new URL(window.location.href).searchParams.get('resume');
+    if(requested && /^[a-f0-9]{32}$/.test(requested)){
+        saved=requested;
+        const clean=new URL(window.location.href);clean.searchParams.delete('resume');
+        window.history.replaceState(null,'',clean.href);
+    }
     if (saved && /^[a-f0-9]{32}$/.test(saved)) {
         request('broadcastStep', { token: saved, send: '0' }).then(value => {
             if (value.project_id !== Number(prepare.dataset.project)) throw new Error('Proyek broadcast tidak cocok.');

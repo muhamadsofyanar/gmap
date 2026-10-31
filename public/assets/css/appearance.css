@@ -88,3 +88,62 @@
 [data-theme=dark] .app-shell :is(.crm-pipeline-due,.crm-pipeline-empty,.crm-pipeline-intro,.crm-detail-meta) { color:var(--ui-muted); }
 .app-shell .crm-table-scroll { max-height:min(70dvh,760px); }
 [data-theme=dark] .app-shell .brand-mark { color:#102b2b; }
+/* v1.6: semantic surfaces cover legacy components in every workspace. */
+.app-shell :is(.crm-project-list,.crm-project-card,.dashboard-followup-tile) { background:var(--ui-surface); color:var(--ui-ink); border-color:var(--ui-line); }
+.app-shell .crm-project-card :is(h2,a:not(.primary-action):not(.crm-remove),strong) { color:var(--ui-ink); }
+.app-shell .crm-project-card :is(p,footer > span,.crm-project-metrics span),.app-shell .workspace-stat > span:not(.workspace-stat-icon) { color:var(--ui-muted); }
+.app-shell :is(.crm-project-icon,.crm-workflow b) { background:var(--ui-soft); color:var(--ui-brand); }
+.app-shell .crm-project-list { gap:18px; padding:20px; }
+.app-shell .crm-project-card { border-radius:14px; box-shadow:0 4px 16px #00000008; }
+[data-theme=dark] .app-shell :is(.crm-project-list,.crm-project-card,.dashboard-followup-tile,.dashboard-workspace table tbody,.dashboard-workspace table tbody tr,.crm-project-card footer) { background:var(--ui-surface)!important; border-color:var(--ui-line); }
+[data-theme=dark] .app-shell .dashboard-workspace table tbody tr:nth-child(even) { background:var(--ui-canvas)!important; }
+[data-theme=dark] .app-shell .dashboard-workspace table tbody tr:hover { background:var(--row-hover)!important; }
+[data-theme=dark] .app-shell :is(.crm-project-title h2,.crm-project-metrics strong,.dashboard-followup-tile strong,.dashboard-followup h2,.workspace-stat strong) { color:var(--ui-ink)!important; }
+[data-theme=dark] .app-shell :is(.crm-project-title p,.crm-project-card footer span,.crm-project-metrics span,.dashboard-followup-tile span,.crm-workflow,.dashboard-followup-head p) { color:var(--ui-muted)!important; }
+[data-theme=dark] .app-shell .status-chip[data-tone=neutral] { background:var(--ui-soft); color:var(--ui-ink); }
+.wa-inbox-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 14px; }
+.wa-inbox-toolbar [data-context-toggle] { margin-left:auto; }
+.wa-refresh-status { color:var(--ui-muted); font-size:12px; line-height:1.5; }
+.wa-refresh-status[data-state=error] { color:#b54736; }
+[data-theme=dark] .wa-refresh-status[data-state=error] { color:#ffb6aa; }
+.app-shell .wa-columns { grid-template-columns:minmax(210px,270px) minmax(0,1fr); max-width:100%; }
+.app-shell .wa-columns > * { min-width:0; }
+.app-shell .wa-context-panel { display:none; }
+.app-shell .wa-context-open .wa-columns { grid-template-columns:minmax(200px,250px) minmax(0,1fr) minmax(220px,280px); }
+.app-shell .wa-context-open .wa-context-panel { display:block; grid-column:auto; border-left:1px solid var(--ui-line); max-height:78dvh; overflow:auto; border-radius:0; }
+.app-shell .wa-context-open .wa-context-panel .wa-form { display:flex; }
+.wa-context-actions { display:grid; gap:8px; margin:14px 0; }
+.app-shell .wa-context-actions .wa-button { width:100%; }
+.app-shell .wa-thread-panel { min-width:0; min-height:min(72dvh,740px); }
+.app-shell .wa-messages { min-height:220px; max-height:50dvh; overflow:auto; overflow-wrap:anywhere; }
+.app-shell .wa-thread-heading { gap:10px; flex-wrap:wrap; }
+.app-shell .wa-thread-heading h2 { overflow-wrap:anywhere; }
+.app-shell .wa-time-note { border-radius:10px; max-width:none; margin:10px 16px; }
+.app-shell .wa-time-note summary { cursor:pointer; }
+.app-shell .wa-time-note p { margin:8px 0 0; line-height:1.6; }
+.app-shell .wa-mobile-back { display:none; }
+.app-shell .wa-contact-title { overflow-wrap:anywhere; }
+.app-shell .dashboard-followup-tiles { grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); }
+@media(max-width:1150px) {
+ .app-shell .wa-context-open .wa-columns { grid-template-columns:minmax(200px,240px) minmax(0,1fr); }
+ .app-shell .wa-context-open .wa-context-panel { position:fixed; right:12px; top:80px; width:min(360px,calc(100vw - 24px)); z-index:50; max-height:calc(100dvh - 100px); box-shadow:0 16px 60px #0005; border:1px solid var(--ui-line); border-radius:14px; }
+}
+@media(max-width:760px) {
+ .app-shell .wa-columns,.app-shell .wa-context-open .wa-columns { grid-template-columns:minmax(0,1fr); }
+ .app-shell .wa-contact-list { max-height:65dvh; }
+ .app-shell .wa-thread-panel { display:none; min-height:65dvh; }
+ .app-shell .wa-show-thread .wa-contact-panel { display:none; }
+ .app-shell .wa-show-thread .wa-thread-panel { display:flex; }
+ .app-shell .wa-show-thread .wa-mobile-back { display:inline-flex; }
+ .app-shell .wa-messages { max-height:48dvh; }
+ .app-shell .wa-context-open .wa-context-panel { display:block; }
+ .app-shell .wa-inbox-toolbar { align-items:center; }
+ .wa-refresh-status { flex-basis:100%; order:3; }
+ .app-shell .crm-project-list { grid-template-columns:minmax(0,1fr); padding:12px; }
+ .app-shell .crm-project-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+}
+
+[data-theme=dark] .app-shell table tbody tr { background:var(--ui-surface)!important; }
+[data-theme=dark] .app-shell table tbody tr:nth-child(even) { background:var(--ui-canvas)!important; }
+[data-theme=dark] .app-shell table tbody tr:hover { background:var(--row-hover)!important; }
+.dashboard-followup-tile[data-tone=green] { --tone:var(--ui-brand); --tone-soft:var(--ui-soft); }

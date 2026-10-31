@@ -24,7 +24,7 @@ final class InboxController extends Controller
     public function index(): void {
         try {
             $filter=is_string($_GET['filter'] ?? null)?$_GET['filter']:'all';
-            if(!in_array($filter,['all','unread','unmatched','unknown'],true))$filter='all';
+            if(!in_array($filter,['all','unread','needs_reply','unmatched','unknown'],true))$filter='all';
             $page=min(100000,$this->id($_GET,'page') ?? 1);$historyPage=min(100000,$this->id($_GET,'history_page') ?? 1);
             $lead=$this->id($_GET,'lead');$anchor=$this->id($_GET,'conversation');
             $search=$_GET['q'] ?? '';if(!is_string($search) || mb_strlen($search)>100)throw new \InvalidArgumentException('Pencarian maksimal 100 karakter.');
@@ -37,6 +37,17 @@ final class InboxController extends Controller
             $candidates=$context && !$context['lead_id'] && $context['phone'] && $this->actor['role']==='admin' ? $this->repo->linkCandidates($this->actor,$context['anchor']):[];
             $replyGateway=$this->actor['role']==='admin' && $context && $context['lead_id']?(new \App\Models\GatewayModel())->settings():null;
             $replyBlocked=$context && $context['lead_id']?\App\Models\ContactPolicy::blocked($context['lead']):false;
+            if (($_GET['refresh']??'')==='1') {
+                header('Cache-Control: no-store');
+                $link=static fn(array $params):string=>base_url('inbox').'?'.http_build_query(array_filter($params,static fn($v)=>$v!==null && $v!==''));
+                $state=['filter'=>$filter,'q'=>$search,'page'=>$page];
+                ob_start();require APP_PATH.'/Views/inbox/contacts.php';$contacts=ob_get_clean();
+                $messages='';if($thread){$compact=false;ob_start();require APP_PATH.'/Views/inbox/messages.php';$messages=ob_get_clean();}
+                $key=$context?($context['lead_id']?'lead:'.$context['lead_id']:'conversation:'.$context['anchor']):'none';
+                $this->json(['success'=>true,'context_key'=>$key,'contacts'=>$contacts,'messages'=>$messages,
+                    'revision'=>hash('sha256',json_encode($thread['events']??[],JSON_THROW_ON_ERROR)),
+                    'has_older'=>$thread['hasOlder']??false,'history_page'=>$historyPage]);return;
+            }
             $this->view('inbox/index',[
                 'pageTitle'=>'Kotak masuk · '.APP_NAME,'activeSection'=>'inbox','isAdmin'=>$this->actor['role']==='admin',
                 'filter'=>$filter,'page'=>$page,'historyPage'=>$historyPage,'search'=>$search,'groups'=>$groups,'thread'=>$thread,'context'=>$context,
@@ -50,6 +61,16 @@ final class InboxController extends Controller
         catch(\DomainException $e){$this->json(['success'=>false,'message'=>'Akses ditolak.'],403);}
         catch(\InvalidArgumentException $e){$this->json(['success'=>false,'message'=>$e->getMessage()],422);}
         $this->redirect('inbox?conversation='.$id);
+    }
+    public function reconcile(): void {
+        $this->validateCsrf();$id=null;
+        try {
+            $id=$this->id($_POST,'message_id',true);
+            $lead=$this->repo->reconcile($this->actor,$id);
+            set_flash('success','Nomor cocok; riwayat yang tersimpan dihubungkan ke CRM.');
+            $this->redirect('inbox?lead='.$lead);
+        }catch(\DomainException $e){$this->json(['success'=>false,'message'=>'Akses admin diperlukan.'],403);}
+        catch(\InvalidArgumentException $e){set_flash('error',$e->getMessage());$this->redirect('inbox'.($id?'?conversation='.$id:''));}
     }
     public function link(): void {
         $this->validateCsrf();$id=null;

@@ -16,7 +16,7 @@ ALTER TABLE project_leads ADD COLUMN rating REAL DEFAULT 0;
 ALTER TABLE project_leads ADD COLUMN reviews_count INTEGER DEFAULT 0;
 CREATE TABLE message_templates(id INTEGER PRIMARY KEY,name TEXT,body TEXT);
 CREATE TABLE crm_contact_blocks(contact_key TEXT,reason TEXT);
-CREATE TABLE whatsapp_broadcasts(token TEXT PRIMARY KEY,project_id INTEGER,template_id INTEGER,template_name TEXT,recipients TEXT,total INTEGER,invalid_count INTEGER,duplicate_count INTEGER,mark_contacted INTEGER);");
+CREATE TABLE whatsapp_broadcasts(token TEXT PRIMARY KEY,project_id INTEGER,template_id INTEGER,template_name TEXT,recipients TEXT,total INTEGER,invalid_count INTEGER,duplicate_count INTEGER,mark_contacted INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);");
 $db->exec("CREATE TABLE whatsapp_gateway (id INTEGER PRIMARY KEY,provider TEXT,enabled INTEGER,api_key_encrypted TEXT,sender TEXT DEFAULT '')");
 $db->prepare('INSERT INTO whatsapp_gateway(id,provider,enabled,api_key_encrypted) VALUES (1,?,?,?)')->execute(['starsender',1,(new App\Services\GatewaySecret())->encrypt('11111111-2222-4333-8444-555555555555')]);
 $repo=new App\Models\InboxRepository($db);

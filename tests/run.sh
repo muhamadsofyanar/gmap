@@ -4,6 +4,10 @@ php tests/team.php
 php tests/install.php
 php tests/inbox.php
 php tests/conversations.php
+php tests/usability.php
+php tests/dashboard_actions.php
+php tests/reply_queue.php
+php tests/broadcast_history.php
 php tests/pipeline_broadcast.php
 php tests/import_file.php
 php tests/import_xlsx.php

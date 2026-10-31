@@ -1,3 +1,9 @@
+# LegaOne v1.6.0
+
+Perbaikan tema, layout Inbox, pembaruan pesan otomatis, penghubungan ulang nomor, tindak lanjut dan riwayat broadcast. Baca **PANDUAN_UPDATE_v1.6.0.md**.
+
+---
+
 # LegaOne v1.5.0
 
 Impor proyek CSV/XLSX, pilihan tahap pipeline untuk broadcast, dan tema terang/gelap/perangkat. Baca **PANDUAN_UPDATE_v1.5.0.md** untuk pemasangan dan batasan pengujian.

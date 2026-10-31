@@ -146,11 +146,27 @@ final class InboxRepository
         $this->query('UPDATE whatsapp_inbox SET lead_id=? WHERE device_id=? AND contact_phone=? AND lead_id IS NULL',[$lead,$message['device_id'],$message['contact_phone']]);
     }
 
+    /** Re-check one stored conversation; only an exact unique contact may be linked. */
+    public function reconcile(array $actor,int $id): int
+    {
+        $this->assertActor($actor);
+        if($actor['role']!=='admin')throw new DomainException('Akses admin diperlukan.');
+        [$scope,$params]=$this->scope($actor);$params[]=$id;
+        $message=$this->query("SELECT m.* FROM whatsapp_inbox m LEFT JOIN project_leads l ON l.id=m.lead_id LEFT JOIN projects p ON p.id=l.project_id WHERE $scope AND m.id=?",$params)->fetch();
+        if(!$message || !$message['contact_phone'])throw new InvalidArgumentException('Penerima belum diketahui; tidak dapat dicocokkan.');
+        $matches=$this->matches($message['contact_phone']);
+        if(count($matches)!==1)throw new InvalidArgumentException($matches?'Nomor cocok dengan beberapa prospek. Pilih proyek dan prospek yang tepat.':'Nomor belum cocok dengan prospek. Periksa nomor pada data proyek atau buat prospek baru.');
+        $lead=(int)$matches[0]['id'];
+        $this->link($actor,$id,$lead);
+        return $lead;
+    }
+
     public function link(array $actor,int $id,int $lead): void
     {
         $this->assertActor($actor);
         if ($actor['role']!=='admin') throw new DomainException('Akses admin diperlukan.');
-        $message=$this->query('SELECT * FROM whatsapp_inbox WHERE id=?',[$id])->fetch();
+        [$scope,$params]=$this->scope($actor);$params[]=$id;
+        $message=$this->query("SELECT m.* FROM whatsapp_inbox m LEFT JOIN project_leads l ON l.id=m.lead_id LEFT JOIN projects p ON p.id=l.project_id WHERE $scope AND m.id=?",$params)->fetch();
         if (!$message || !$message['contact_phone']) throw new InvalidArgumentException('Kontak penerima belum diketahui.');
         $matches=$this->matches($message['contact_phone']);
         if (!in_array($lead,array_map('intval',array_column($matches,'id')),true)) throw new InvalidArgumentException('Nomor prospek tidak cocok dengan percakapan.');

@@ -27,6 +27,32 @@ class InboxHTTP(unittest.TestCase):
         c=build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
         if id: c.open(self.base+f'/test-login?id={id}').close()
         return c
+    def test_refresh_returns_scoped_fragments(self):
+        c=self.client(2)
+        data=json.load(c.open(self.base+'/inbox?lead=10&refresh=1'))
+        self.assertEqual(data['context_key'],'lead:10')
+        self.assertIn('Hello &lt;script&gt;',data['messages'])
+        self.assertNotIn('<script>alert(1)</script>',data['messages'])
+        self.assertIn('revision',data)
+        with self.assertRaises(HTTPError) as ctx:self.client(3).open(self.base+'/inbox?lead=10&refresh=1')
+        self.assertEqual(ctx.exception.code,404)
+    def test_reconcile_rejects_missing_csrf_and_member(self):
+        for uid in [1,2]:
+            c=self.client(uid)
+            with self.assertRaises(HTTPError) as ctx:c.open(Request(self.base+'/inbox/reconcile',data=b'message_id=1',headers={'Accept':'application/json'}))
+            self.assertEqual(ctx.exception.code,403)
+        c=self.client(2);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        with self.assertRaises(HTTPError) as ctx:c.open(Request(self.base+'/inbox/reconcile',data=f'message_id=1&_csrf_token={csrf}'.encode(),headers={'Accept':'application/json'}))
+        self.assertEqual(ctx.exception.code,403)
+    def test_broadcast_history_is_admin_scoped(self):
+        c=self.client(1);html=c.open(self.base+'/crm/broadcastHistory?project_id=1').read().decode()
+        self.assertIn('Riwayat',html)
+        self.assertNotIn('Terjadi Kesalahan Sistem',html)
+        with self.assertRaises(HTTPError) as ctx:self.client(2).open(self.base+'/crm/broadcastHistory?project_id=1')
+        self.assertEqual(ctx.exception.code,403)
+        with self.assertRaises(HTTPError) as ctx:c.open(self.base+'/crm/broadcastHistory?project_id=2')
+        self.assertEqual(ctx.exception.code,404)
     def test_member_scope_and_xss(self):
         html=self.client(2).open(self.base+'/inbox?lead=10').read().decode()
         self.assertIn('Hello &lt;script&gt;',html);self.assertNotIn('<script>alert(1)</script>',html)

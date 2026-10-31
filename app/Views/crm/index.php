@@ -17,6 +17,7 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
         <div><p class="eyebrow">CRM PROYEK</p><h1><?= e($project['name']) ?></h1><p><?= e($project['keyword']) ?> &middot; <?= e($project['location']) ?> &middot; <?= number_format($stats['total_leads'] ?? 0) ?> prospek di CRM</p></div>
         <button type="button" id="crmBroadcastOpen" class="primary-action" <?= !(int)($stats['total_leads'] ?? 0) ? 'disabled title="Tambahkan prospek ke CRM terlebih dahulu"' : '' ?>>Broadcast WhatsApp</button>
     </header>
+    <a class="crm-text-button" href="<?= e(base_url('crm/broadcastHistory?project_id='.(int)$selectedProject)) ?>">Riwayat broadcast →</a>
     <p id="crmNotice" class="crm-notice" role="status" hidden></p>
     <nav class="crm-view-switch" aria-label="Tampilan CRM">
         <a href="<?= e($viewLink('list')) ?>" <?= $viewMode === 'list' ? 'aria-current="page"' : '' ?>>Daftar</a>
@@ -114,4 +115,4 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
 
 <script id="crmTemplatesData" type="application/json"><?= json_encode($templates, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?></script>
 <script src="<?= base_url('assets/js/crm.js?v=free-1.4') ?>" defer></script>
-<script src="<?= base_url('assets/js/crm-broadcast.js?v=1.5.0') ?>" defer></script>
+<script src="<?= base_url('assets/js/crm-broadcast.js?v=1.6.0') ?>" defer></script>

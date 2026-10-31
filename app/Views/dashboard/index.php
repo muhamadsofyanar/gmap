@@ -19,7 +19,10 @@
         <div class="dashboard-followup-tiles">
             <a class="dashboard-followup-tile" data-tone="yellow" href="<?= e(base_url('sales?due=today')) ?>"><strong><?= (int)($reminders['today'] ?? 0) ?></strong><span>Aktivitas hari ini</span></a>
             <a class="dashboard-followup-tile" data-tone="red" href="<?= e(base_url('sales?due=overdue')) ?>"><strong><?= (int)($reminders['overdue'] ?? 0) ?></strong><span>Aktivitas terlambat</span></a>
+            <a class="dashboard-followup-tile" data-tone="yellow" href="<?= e(base_url('dashboard/followups')) ?>"><strong><?= (int)($stats['unscheduled_active']??0) ?></strong><span>Prospek aktif tanpa jadwal</span></a>
+            <a class="dashboard-followup-tile" data-tone="green" href="<?= e(base_url('inbox?filter=needs_reply')) ?>"><strong><?= (int)($needsReply??0) ?></strong><span>Pesan masuk perlu balasan</span></a>
         </div>
+        <p class="crm-footnote">Tanpa jadwal = tahap Dihubungi/Berminat/Negosiasi tanpa aktivitas terbuka. Perlu balasan dihitung dari riwayat pesan yang tercatat, bukan status baca WhatsApp.</p>
     </section>
 
     <!-- Ringkasan Performa Proyek -->

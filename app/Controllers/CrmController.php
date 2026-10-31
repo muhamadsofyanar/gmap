@@ -176,6 +176,17 @@ class CrmController extends Controller
         $this->json(['success' => true, 'delivery_status' => $status, 'message' => $messages[$status] ?? $messages['unknown']]);
     }
 
+    public function broadcastHistory(): void
+    {
+        $this->requireAuth();
+        $id=filter_var($_GET['project_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        $project=$id?$this->projectModel->getProjectById($id):null;
+        if(!$project || (int)$project['workspace_id']!==1)$this->json(['success'=>false,'message'=>'Proyek tidak ditemukan.'],404);
+        $page=max(1,min(100000,(int)($_GET['page']??1)));
+        $items=(new \App\Models\BroadcastModel())->history($id,$page);
+        $this->view('crm/broadcast-history',['pageTitle'=>'Riwayat broadcast','activeSection'=>'crm','project'=>$project,'page'=>$page,'items'=>array_slice($items,0,10),'hasNext'=>count($items)>10,'stages'=>(new \App\Models\SalesModel())->stages($id)]);
+    }
+
     public function broadcastRecipients(): void
     {
         $this->requireAuth();

@@ -93,6 +93,16 @@ class BroadcastModel
         return $this->find($token);
     }
 
+    /** Read-only, bounded campaign history. Recipient snapshots are not rendered in the list. */
+    public function history(int $projectId,int $page=1): array
+    {
+        $offset=(max(1,min(100000,$page))-1)*10;
+        $q=Database::getInstance()->prepare("SELECT b.token,b.created_at FROM whatsapp_broadcasts b JOIN projects p ON p.id=b.project_id WHERE b.project_id=? AND p.workspace_id=1 ORDER BY b.created_at DESC,b.token DESC LIMIT 11 OFFSET $offset");
+        $q->execute([$projectId]);$result=[];
+        foreach($q->fetchAll() as $row){$batch=$this->find($row['token']);$summary=$this->progress($batch);unset($summary['next'],$summary['example']);$result[]=$summary+['created_at'=>$row['created_at'],'stage_filters'=>$batch['stage_filters']];}
+        return $result;
+    }
+
     public function progress(array $batch): array
     {
         $states = [];

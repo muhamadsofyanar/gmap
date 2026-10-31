@@ -55,7 +55,7 @@ $navIcons = [
     <script src="<?= e(base_url('assets/js/account.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/extras.js?v=2')) ?>" defer></script>
 <?php if(in_array($activeSection,['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/inbox.css?v=1.4.0')) ?>"><?php endif ?>
-<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?><link rel="stylesheet" href="<?= e(base_url('assets/css/appearance.css?v=1.5.0')) ?>">
+<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?><link rel="stylesheet" href="<?= e(base_url('assets/css/appearance.css?v=1.6.0')) ?>">
 <script src="<?= e(base_url('assets/js/appearance.js?v=1.5.0')) ?>" defer></script>
 </head>
 <body class="app-shell">

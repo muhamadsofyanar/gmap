@@ -35,7 +35,15 @@ class DashboardController extends Controller
             'pageTitle' => 'Dashboard Prospek Bisnis - Gmap Prospek',
             'projects' => $projects,
             'reminders' => (new \App\Models\SalesModel())->reminderCounts(),
-            'stats' => $this->crmModel->getDashboardStats()
+            'stats' => $this->crmModel->getDashboardStats(),
+            'needsReply'=>(new \App\Models\ConversationRepository(\App\Core\Database::getInstance()))->needsReplyCount(\App\Services\AuthGuard::identity())
         ]);
+    }
+    public function followups(): void
+    {
+        $this->requireAuth();
+        $page=max(1,min(100000,(int)($_GET['page']??1)));
+        $items=$this->crmModel->unscheduledActive($page);
+        $this->view('dashboard/followups',['pageTitle'=>'Prospek tanpa jadwal','activeSection'=>'dashboard','items'=>array_slice($items,0,50),'page'=>$page,'hasNext'=>count($items)>50]);
     }
 }

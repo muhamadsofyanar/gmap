@@ -1,0 +1,27 @@
+const {JSDOM}=require(process.env.JSDOM_MODULE||'jsdom');
+const {readFileSync}=require('node:fs');const {execFileSync}=require('node:child_process');const assert=require('node:assert/strict');
+const html=execFileSync('php',[__dirname+'/render_inbox.php'],{encoding:'utf8',env:{...process.env,APP_ENV:'development',APP_URL:'http://localhost'}});
+assert(!html.includes('Terjadi Kesalahan Sistem'));
+const dom=new JSDOM(html,{url:'http://localhost/inbox?lead=10',runScripts:'outside-only'});const w=dom.window,d=w.document;
+Object.defineProperty(d,'hidden',{value:false,configurable:true});
+let scheduled=[];let count=0;w.setTimeout=(fn,ms)=>{scheduled.push({fn,ms,id:++count});return count;};w.clearTimeout=id=>{scheduled=scheduled.filter(x=>x.id!==id);};
+let calls=0,fail=false;
+w.fetch=async()=>{calls++;if(fail)throw Error('Offline');return {ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>({success:true,context_key:'lead:10',contacts:'<div class="wa-contact-list">Updated contacts</div>',messages:'<div data-message-scroll><article>New incoming message</article></div>',revision:'r1',has_older:true,history_page:1})};};
+w.eval(readFileSync(__dirname+'/../public/assets/js/inbox.js','utf8'));
+(async()=>{
+ const workspace=d.querySelector('[data-inbox-workspace]');const editor=d.querySelector('textarea[name=message]');editor.value='Draf belum dikirim';
+ assert(workspace.classList.contains('wa-show-thread'));
+ assert.equal(scheduled[0].ms,10000);
+ await scheduled.shift().fn();
+ assert.equal(calls,1);assert.equal(editor.value,'Draf belum dikirim');assert.equal(d.querySelector('textarea[name=message]'),editor);
+ assert(d.querySelector('[data-message-scroll]').textContent.includes('New incoming message'));
+ assert.equal(d.querySelector('[data-older-messages]').hidden,false);
+ const toggle=d.querySelector('[data-context-toggle]');toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'true');
+ d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(toggle.getAttribute('aria-expanded'),'false');
+ Object.defineProperty(d,'hidden',{value:true,configurable:true});await scheduled.shift().fn();assert.equal(calls,1);
+ Object.defineProperty(d,'hidden',{value:false,configurable:true});editor.readOnly=true;await scheduled.shift().fn();assert.equal(calls,1);
+ editor.readOnly=false;fail=true;await scheduled.shift().fn();assert.equal(calls,2);assert.equal(scheduled.at(-1).ms,20000);
+ assert.equal(d.querySelector('[data-refresh-status]').dataset.state,'error');assert.equal(editor.value,'Draf belum dikirim');
+ d.querySelector('[data-inbox-back]').click();assert(!workspace.classList.contains('wa-show-thread'));
+ console.log('Inbox frontend: 16 assertions passed (DOM only)');dom.window.close();
+})().catch(error=>{console.error(error);dom.window.close();process.exitCode=1;});

@@ -186,3 +186,7 @@ Lihat `VALIDATION.md` untuk hasil pengujian dan batas verifikasi. Build image Do
 - https://coolify.io/docs/applications/configuration/environment-variables
 - https://hub.docker.com/_/php
 - https://docs.docker.com/reference/compose-file/services/
+
+
+## Pembaruan v1.7.1
+Perbaikan kompatibilitas URL pengaturan akun platform: `/account/setting` diarahkan ke `/account/settings`. Lihat `PANDUAN_UPDATE_v1.7.1.md`.

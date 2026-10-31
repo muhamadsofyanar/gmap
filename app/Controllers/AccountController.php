@@ -82,6 +82,15 @@ class AccountController extends Controller
     {
         if(!$this->authorize())return;$this->mutation(fn()=>$this->accounts->invite($_POST),'Undangan dikirim ke tujuan yang ditentukan.','account');
     }
+    /**
+     * Backward-compatible alias for the singular URL used in earlier instructions.
+     * Canonical route: /account/settings
+     */
+    public function setting():void
+    {
+        $this->redirect('account/settings');
+    }
+
     public function settings():void
     {
         try{PlatformContext::requirePlatformAdmin();$settings=$this->accounts->publicSettings();}

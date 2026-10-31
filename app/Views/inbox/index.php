@@ -6,6 +6,7 @@ $prettyTime=static fn(string $time):string=>(new DateTimeImmutable($time,new Dat
 ?>
 <section class="wa-workspace">
 <header class="wa-page-heading"><div><p class="eyebrow">WHATSAPP & CRM</p><h1>Kotak masuk</h1><p>Satu percakapan, satu konteks pelanggan.</p></div><a class="wa-button wa-button-secondary" href="<?= e($link($state+$selection+['history_page'=>$historyPage])) ?>">Muat ulang</a></header>
+<p class="wa-time-note">Waktu ditampilkan dalam WIB. Jika webhook tidak memuat waktu kirim, waktu yang tercatat adalah waktu penerimaan server.</p>
 <nav class="wa-filters" aria-label="Filter percakapan">
 <?php $filters=['all'=>'Percakapan','unread'=>'Perlu ditinjau'];if($isAdmin)$filters+=['unmatched'=>'Belum di CRM','unknown'=>'Penerima belum diketahui'];foreach($filters as $value=>$label): ?>
 <a href="<?= e($link(['filter'=>$value])) ?>" class="<?= $filter===$value?'wa-filter-active':'' ?>" <?= $filter===$value?'aria-current="page"':'' ?>><?= e($label) ?></a>

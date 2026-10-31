@@ -7,8 +7,8 @@ use App\Models\SalesModel;
 
 class IntakeController extends Controller
 {
-    /** CSV/Excel import is switched off for users; set true to offer it again. */
-    private const IMPORT_ENABLED = false;
+    /** Project-first CSV/Excel import; review before committing. */
+    private const IMPORT_ENABLED = true;
 
     private function page(array $extra=[]): void
     {
@@ -89,10 +89,40 @@ class IntakeController extends Controller
         if (!self::IMPORT_ENABLED) { $this->importDisabled(); return; }
         $this->requireAuth(); $this->validateCsrf();
         try {
-            $result=(new IntakeModel())->commit(SalesModel::text($_POST,'token',32,true),is_array($_POST['selected']??null)?$_POST['selected']:[]);
+            $selected=is_array($_POST['selected']??null)?$_POST['selected']:[];
+            if(isset($_POST['selected_json'])) {
+                $encoded=$_POST['selected_json'];
+                if(!is_string($encoded) || strlen($encoded)>12000)throw new \InvalidArgumentException('Pilihan baris tidak valid.');
+                try{$selected=json_decode($encoded,false,8,JSON_THROW_ON_ERROR);}catch(\JsonException $e){throw new \InvalidArgumentException('Pilihan baris tidak valid.');}
+                if(!is_array($selected) || !array_is_list($selected) || count($selected)>1000)throw new \InvalidArgumentException('Pilihan baris tidak valid.');
+            }
+            $result=(new IntakeModel())->commit(SalesModel::text($_POST,'token',32,true),$selected);
             set_flash('success',$result['inserted'].' prospek diimpor; '.$result['skipped'].' pilihan dilewati. Data lama tetap tersimpan.');
             $this->redirect('projects/viewProject/'.$result['project_id']);
         } catch (\InvalidArgumentException $e) { set_flash('error',$e->getMessage()); $this->redirect('intake/review?token='.rawurlencode(is_string($_POST['token']??null)?$_POST['token']:'')); }
+    }
+
+    public function report(): void
+    {
+        $this->requireAuth();
+        try {
+            $model=new IntakeModel();
+            $batch=$model->batch(SalesModel::text($_GET,'token',32,true));
+            $rows=$model->review($batch);
+        } catch (\InvalidArgumentException $e) { set_flash('error',$e->getMessage()); $this->redirect('intake'); return; }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="hasil-tinjauan-impor.csv"');
+        header('Cache-Control: no-store');
+        echo "\xEF\xBB\xBF";
+        $out=fopen('php://output','w');
+        fputcsv($out,['Baris','Nama bisnis','Telepon','Alamat','Status','Keterangan'],',','"','');
+        foreach ($rows as $item) {
+            $cells=[(string)($item['index']+2),$item['row']['shop_name']??'',$item['row']['phone']??'',$item['row']['address']??'',$item['eligible']?'Valid':'Dilewati',$item['message']];
+            // Prevent spreadsheet formula execution, including whitespace-prefixed formulas.
+            $cells=array_map(static fn($value)=>preg_match('/^[\s]*[=+@-]/u',$value) ? "'".$value : $value,$cells);
+            fputcsv($out,$cells,',','"','');
+        }
+        fclose($out);
     }
 
     public function example(): void

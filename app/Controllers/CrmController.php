@@ -188,9 +188,9 @@ class CrmController extends Controller
             try{$number=\App\Models\GatewayModel::phone($lead['whatsapp'] ?: ($lead['phone'] ?? ''));}
             catch(\InvalidArgumentException $e){$reason='Nomor tidak valid';}
             if($lead['contact_blocked'])$reason='Jangan dihubungi';
-            $items[]=['id'=>(int)$lead['id'],'name'=>$lead['shop_name'],'number'=>$number,'eligible'=>$reason==='','reason'=>$reason];
+            $items[]=['id'=>(int)$lead['id'],'name'=>$lead['shop_name'],'number'=>$number,'eligible'=>$reason==='','reason'=>$reason,'stage'=>$lead['lead_status']];
         }
-        $this->json(['success'=>true,'recipients'=>$items]);
+        $this->json(['success'=>true,'recipients'=>$items,'stages'=>(new \App\Models\SalesModel())->stages($projectId)]);
     }
 
     public function prepareBroadcast(): void
@@ -210,6 +210,11 @@ class CrmController extends Controller
         $project=$this->projectModel->getProjectById($projectId);
         if(!$project || (int)$project['workspace_id']!==1)$this->json(['success'=>false,'message'=>'Proyek tidak ditemukan.'],404);
         try{
+            $encodedStages=$_POST['stage_filters_json'] ?? '[]';
+            if(!is_string($encodedStages) || strlen($encodedStages)>1000)throw new \InvalidArgumentException('Filter tahap pipeline tidak valid.');
+            try{$stageFilters=json_decode($encodedStages,false,8,JSON_THROW_ON_ERROR);}catch(\JsonException $e){throw new \InvalidArgumentException('Filter tahap pipeline tidak valid.');}
+            if(!is_array($stageFilters))throw new \InvalidArgumentException('Filter tahap pipeline tidak valid.');
+            $stageFilters=\App\Models\BroadcastModel::stageFilters($stageFilters);
             $body=$_POST['body'] ?? '';if(!is_string($body))throw new \InvalidArgumentException('Pesan tidak valid.');
             $body=\App\Models\MessageTemplateModel::validateBody($body);
             $template=['id'=>0,'name'=>'Pesan bebas','body'=>$body];
@@ -220,7 +225,7 @@ class CrmController extends Controller
             }
             (new \App\Models\GatewayModel())->credentials();
             $model=new \App\Models\BroadcastModel();
-            $batch=$model->prepare($token,$projectId,$template,($_POST['mark_contacted'] ?? '')==='1',$selected);
+            $batch=$model->prepare($token,$projectId,$template,($_POST['mark_contacted'] ?? '')==='1',$selected,$stageFilters);
             $progress=$model->progress($batch);
             // Saving is opt-in and only after the entire selection has been validated.
             if($templateId>0 && ($_POST['save_template'] ?? '')==='1')(new \App\Models\MessageTemplateModel())->save($templateId,$template['name'],$body);
@@ -246,6 +251,7 @@ class CrmController extends Controller
             catch (\Throwable $e) { $this->json(['success' => false, 'message' => 'Gateway tidak aktif atau belum siap. Broadcast dijeda.'], 422); }
             $lead = $this->crmModel->getLeadById($recipient['id']);
             $valid = $lead && (int)($lead['workspace_id'] ?? 0)===1 && (int)$lead['in_crm'] && (int)$lead['project_id'] === (int)$batch['project_id'] && !\App\Models\ContactPolicy::blocked($lead);
+            $valid = $valid && (!$batch['stage_filters'] || in_array($lead['lead_status'],$batch['stage_filters'],true));
             try { $valid = $valid && \App\Models\GatewayModel::phone($lead['whatsapp'] ?: ($lead['phone'] ?? '')) === $recipient['number']; }
             catch (\InvalidArgumentException $e) { $valid = false; }
             $reservation = $gateway->reserve($recipient['token'], $recipient['id'], (int)$batch['template_id'], $recipient['number'], $recipient['message']);

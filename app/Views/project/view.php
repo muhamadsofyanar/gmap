@@ -23,6 +23,8 @@
 
         <!-- Project Actions -->
         <div class="project-card-actions flex items-center space-x-2">
+            <a class="primary-action" href="<?= e(base_url('intake?project_id='.(int)$project['id'].'#intake-import')) ?>">Impor kontak</a>
+            <a class="crm-secondary" href="<?= e(base_url('crm?project_id='.(int)$project['id'].'&view=pipeline')) ?>">Buka pipeline</a>
             <a href="<?= base_url('projects/export/' . $project['id']) ?>" 
                class="btn-brand py-2 px-4 rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-sm">
                 <svg class="w-4 h-4 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -5,8 +5,15 @@ $db=fixture();$db->exec("UPDATE project_leads SET phone='081234567890' WHERE id=
 App\Models\InboxRepository::install($db);
 $db->exec("ALTER TABLE projects ADD COLUMN total_leads INTEGER DEFAULT 0;
 CREATE TABLE crm_lead_sources(lead_id INTEGER PRIMARY KEY,source TEXT);
-CREATE TABLE whatsapp_deliveries(id INTEGER PRIMARY KEY,request_token TEXT UNIQUE,lead_id INTEGER,template_id INTEGER,recipient TEXT,message TEXT,status TEXT,http_code INTEGER,updated_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE whatsapp_deliveries(id INTEGER PRIMARY KEY,request_token TEXT UNIQUE,lead_id INTEGER,template_id INTEGER,recipient TEXT,message TEXT,status TEXT,http_code INTEGER,updated_at TEXT,created_at TEXT DEFAULT (datetime('now','+7 hours')));
 ALTER TABLE projects ADD COLUMN keyword TEXT;ALTER TABLE projects ADD COLUMN location TEXT;
+CREATE TABLE crm_pipeline(project_id INTEGER,code TEXT,label TEXT);
+CREATE TABLE crm_intake_batches(token TEXT PRIMARY KEY,project_id INTEGER,project_name TEXT,source TEXT,payload TEXT,mapping TEXT,result TEXT,created_at TEXT DEFAULT (datetime('now','+7 hours')));
+CREATE TABLE crm_intake_chunks(batch_token TEXT,chunk_no INTEGER,content BLOB);
+ALTER TABLE projects ADD COLUMN created_at TEXT;
+ALTER TABLE projects ADD COLUMN status TEXT;
+ALTER TABLE project_leads ADD COLUMN rating REAL DEFAULT 0;
+ALTER TABLE project_leads ADD COLUMN reviews_count INTEGER DEFAULT 0;
 CREATE TABLE message_templates(id INTEGER PRIMARY KEY,name TEXT,body TEXT);
 CREATE TABLE crm_contact_blocks(contact_key TEXT,reason TEXT);
 CREATE TABLE whatsapp_broadcasts(token TEXT PRIMARY KEY,project_id INTEGER,template_id INTEGER,template_name TEXT,recipients TEXT,total INTEGER,invalid_count INTEGER,duplicate_count INTEGER,mark_contacted INTEGER);");

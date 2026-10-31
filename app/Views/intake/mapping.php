@@ -1,6 +1,6 @@
 <section class="crm-workspace">
 <header class="page-heading"><div><p class="eyebrow">IMPOR · LANGKAH 2 DARI 3</p><h1>Cocokkan kolom</h1><p><?= count($payload['rows']) ?> baris dibaca. Pilih kolom sumber untuk setiap jenis data.</p></div></header>
-<section class="crm-panel crm-detail-card"><form class="crm-edit-form" method="post" action="<?= e(base_url('intake/preview')) ?>"><?= csrf_field() ?><input type="hidden" name="token" value="<?= e($batch['token']) ?>">
+<section class="crm-panel crm-detail-card"><form class="crm-edit-form" data-process-form method="post" action="<?= e(base_url('intake/preview')) ?>"><?= csrf_field() ?><input type="hidden" name="token" value="<?= e($batch['token']) ?>">
 <?php $oldMap=json_decode($batch['mapping']??'null',true)?:[]; foreach (\App\Models\IntakeModel::FIELDS as $key=>$label):
     $selectedIndex=$oldMap[$key]??null;
     if (!$oldMap) foreach ($payload['headers'] as $i=>$header) if (mb_strtolower(trim($header))===mb_strtolower($label) || trim($header)===$key) { $selectedIndex=$i; break; }

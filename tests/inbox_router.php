@@ -4,10 +4,12 @@ if (PHP_SAPI!=='cli-server' || !getenv('INBOX_TEST_DB')) {http_response_code(404
 require_once __DIR__.'/../config/config.php';
 require_once __DIR__.'/../config/database.php';
 require_once __DIR__.'/bootstrap.php';
-$db=new PDO('sqlite:'.getenv('INBOX_TEST_DB'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+require_once __DIR__.'/sqlite_compat.php';
+$db=new IntakeTestPDO('sqlite:'.getenv('INBOX_TEST_DB'),null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 (new ReflectionProperty(App\Core\Database::class,'instance'))->setValue(null,$db);
 $db->sqliteCreateFunction('DATABASE',static fn()=>'fixture');
 (new ReflectionProperty(App\Services\WhatsAppCheckMigration::class,'applied'))->setValue(null,['fixture'=>true]);
+$db->sqliteCreateFunction('CURDATE',static fn()=>date('Y-m-d'));
 $db->sqliteCreateFunction('NOW',static fn()=>date('Y-m-d H:i:s'));
 (new ReflectionProperty(App\Models\GatewayModel::class,'migrated'))->setValue(null,true);
 (new ReflectionProperty(App\Models\BroadcastModel::class,'migrated'))->setValue(null,true);

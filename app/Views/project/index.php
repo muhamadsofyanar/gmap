@@ -1,6 +1,6 @@
 <!-- Manajemen Proyek -->
 <div class="space-y-6 project-workspace">
-    <section class="page-heading"><div><p class="eyebrow">PROYEK</p><h1>Proyek Prospek</h1><p>Temukan calon pelanggan dan kelola setiap proyek di satu tempat.</p></div><a class="primary-action" href="<?= e(base_url('intake')) ?>">Tambah prospek</a></section>
+    <section class="page-heading"><div><p class="eyebrow">PROYEK</p><h1>Proyek Prospek</h1><p>Temukan calon pelanggan dan kelola setiap proyek di satu tempat.</p></div><a class="primary-action" href="<?= e(base_url('intake')) ?>">Tambah / impor prospek</a></section>
 
     <!-- Form Buat Proyek & Scraping Baru -->
     <div id="projectSearch" class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">

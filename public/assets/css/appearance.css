@@ -1,0 +1,90 @@
+/* LegaOne 1.5 — workspace appearance; no network fonts or UI dependencies. */
+:root { color-scheme:light; --ui-canvas:#f2f6fa; --ui-surface:#fff; --ui-ink:#1b2e40; --ui-muted:#53677b; --ui-line:#dce5ef; --ui-soft:#eaf6f3; --ui-brand:#056b71; --ui-hover:#04575c; --ui-radius:12px; --row-hover:#f0f8f7; }
+:root[data-theme=dark] { color-scheme:dark; --ui-canvas:#101923; --ui-surface:#192633; --ui-ink:#e7eef6; --ui-muted:#a8bacb; --ui-line:#344858; --ui-soft:#203f42; --ui-brand:#67d8ca; --ui-hover:#94e7dc; --row-hover:#213944; }
+.app-shell { --pu-line:var(--ui-line); --pu-muted:var(--ui-muted); --pu-green-700:var(--ui-brand); --pu-green-800:var(--ui-hover); --pu-green-50:var(--ui-soft); --surface:var(--ui-surface); --ink:var(--ui-ink); --muted:var(--ui-muted); --line:var(--ui-line); --bg:var(--ui-canvas); --canvas:var(--ui-canvas); background:var(--ui-canvas); color:var(--ui-ink); }
+.app-shell .app-content { min-width:0; }
+.app-shell .app-sidebar,.app-shell .app-topbar { border-color:var(--ui-line); }
+.app-shell .app-topbar { gap:12px; }
+.theme-control { display:flex; align-items:center; gap:8px; margin-left:auto; color:var(--ui-muted); font-size:12px; }
+.theme-control select { min-height:38px; padding:6px 9px; border:1px solid var(--ui-line); border-radius:10px; background:var(--ui-surface); color:var(--ui-ink); font-size:13px; }
+.app-shell .page-heading h1,.app-shell .wa-page-heading h1 { letter-spacing:-.035em; font-size:clamp(23px,2.4vw,30px); color:var(--ui-ink); }
+.app-shell .page-heading,.app-shell .wa-page-heading { gap:16px; }
+.app-shell :is(.crm-panel,.crm-detail-card,.sales-item,.settings-tabs,.account-menu,.wa-contact-panel,.wa-thread-panel,.wa-context-panel,.crm-dialog,.wa-dialog) { background:var(--ui-surface); border-color:var(--ui-line); color:var(--ui-ink); border-radius:14px; }
+.app-shell :is(.crm-dialog,.wa-dialog)::backdrop { background:#07192399; backdrop-filter:blur(4px); }
+.app-shell dialog { max-width:min(860px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; }
+.app-shell :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea) { color:var(--ui-ink); background-color:var(--ui-surface); border-color:var(--ui-line); }
+.app-shell input::placeholder,.app-shell textarea::placeholder { color:var(--ui-muted); opacity:1; }
+.app-shell .crm-table-scroll { max-width:100%; overflow:auto; border-radius:12px; scrollbar-color:var(--ui-muted) transparent; }
+.app-shell table { color:var(--ui-ink); border-collapse:separate; border-spacing:0; }
+.app-shell table th { position:sticky; top:0; z-index:1; background:var(--ui-soft); color:var(--ui-ink); font-size:12px; font-weight:700; letter-spacing:.015em; padding:14px 16px; border-bottom:1px solid var(--ui-line); }
+.app-shell table td { padding:15px 16px; font-size:14px; line-height:1.55; border-bottom:1px solid var(--ui-line); vertical-align:middle; }
+.app-shell table tbody tr:nth-child(even) { background:color-mix(in srgb,var(--ui-canvas) 40%,var(--ui-surface)); }
+.app-shell table tbody tr:hover { background:var(--row-hover); }
+.app-shell .crm-table td small { color:var(--ui-muted); }
+.app-shell .project-card-actions { flex-wrap:wrap; gap:8px; }
+.app-shell .project-card-actions > * { margin-left:0!important; }
+.intake-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; align-items:start; }
+.intake-description,.wa-time-note { font-size:13px; line-height:1.6; color:var(--ui-muted); margin:8px 0 16px; }
+.import-dropzone { padding:20px; border:2px dashed var(--ui-line); background:var(--ui-soft); border-radius:12px; }
+.import-dropzone input { width:100%; margin:10px 0; }
+.import-dropzone small { font-size:12px; color:var(--ui-muted); }
+.broadcast-stage-picker { border:1px solid var(--ui-line); padding:12px; margin:14px 0; border-radius:12px; }
+.broadcast-stage-picker legend { padding:0 6px; font-weight:650; }
+#broadcastStageFilters { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+#broadcastStageFilters label { display:inline-flex; align-items:center; gap:7px; padding:8px 10px; background:var(--ui-soft); border:1px solid var(--ui-line); border-radius:9px; font-size:13px; cursor:pointer; }
+#broadcastStageFilters label:has(:checked) { border-color:var(--ui-brand); }
+#broadcastStageFilters input { accent-color:var(--ui-brand); }
+.process-notice { padding:12px; font-size:13px; color:var(--ui-ink); background:var(--ui-soft); border-radius:10px; }
+[aria-busy=true] { cursor:progress; }
+[aria-busy=true] .process-notice::before { content:' '; display:inline-block; width:12px; height:12px; border:2px solid var(--ui-line); border-top-color:var(--ui-brand); border-radius:50%; margin-right:8px; animation:workspace-spin .8s linear infinite; }
+#crmBroadcastProgress { width:100%; height:12px; accent-color:var(--ui-brand); }
+.app-shell button:disabled { cursor:not-allowed; opacity:.6; }
+@keyframes workspace-spin { to { transform:rotate(360deg); } }
+@keyframes workspace-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:no-preference) { .app-shell .app-content > * { animation:workspace-enter .22s ease-out; } .app-shell :is(button,a,select) { transition:background-color .15s,color .15s,border-color .15s,box-shadow .15s; } .app-shell dialog[open] { animation:workspace-enter .18s ease-out; } }
+/* Legacy templates include utility colours and hard-coded component colours. */
+[data-theme=dark] .app-shell { --pu-green-900:#d7f6f0; --pu-green-100:#203f42; --pu-green-300:#387b75; --pu-leaf:#a1e6bb; --pu-leaf-50:#193c32; --pu-yellow-50:#443a20; --pu-yellow-text:#ffe1a3; --pu-red:#ffaaaa; --pu-red-50:#482c35; }
+[data-theme=dark] .app-shell :is(.bg-white,.bg-gray-50,.bg-gray-100,.bg-slate-50,.bg-slate-100,.crm-summary > span,.crm-toolbar,.crm-search,.crm-empty,.crm-dialog,.broadcast-recipient,.broadcast-recipients,.crm-composer,.message-composer,.wa-search,.wa-thread-header,.wa-thread-footer,.wa-context-card,.wa-bubble,.wa-contact,.wa-contact-list,.wa-message-composer,.crm-status,.crm-edit-form,.crm-secondary,.wa-button-secondary,.broadcast-selection-tools button) { background:var(--ui-surface)!important; color:var(--ui-ink); border-color:var(--ui-line)!important; }
+[data-theme=dark] .app-shell :is(.text-gray-900,.text-gray-800,.text-gray-700,.text-slate-900,.text-slate-800,.text-slate-700,.crm-business,.crm-name,.topbar-title strong,.app-brand,.account-menu-heading strong,.wa-contact-copy strong,.wa-thread-header h2,.wa-context-card h3,.crm-detail-card h2,.crm-dialog h2,.crm-dialog h3) { color:var(--ui-ink)!important; }
+[data-theme=dark] .app-shell :is(.text-gray-600,.text-gray-500,.text-gray-400,.text-slate-600,.text-slate-500,.nav-caption,.nav-item,.topbar-title,.sidebar-user-info small,.crm-footnote,.crm-detail-label,.wa-contact-copy small,.wa-thread-header p,.wa-context-card p,.wa-bubble small,.crm-dialog p,.crm-dialog small) { color:var(--ui-muted)!important; }
+[data-theme=dark] .app-shell :is(.border-gray-100,.border-gray-200,.border-gray-300,.border-slate-200) { border-color:var(--ui-line)!important; }
+[data-theme=dark] .app-shell :is(.primary-action,.btn-brand,#checkWaBtn,#bulkMoveToCrmBtn) { color:#102b2b!important; }
+[data-theme=dark] .app-shell :is(.wa-thread-messages,.wa-messages,.wa-conversation-thread) { background-color:var(--ui-canvas); }
+[data-theme=dark] .app-shell :is(.wa-bubble-out,.wa-bubble-outgoing,.wa-contact-active) { background:var(--ui-soft)!important; }
+[data-theme=dark] .app-shell :is(.crm-notice,.wa-notice) { background:var(--ui-soft); color:var(--ui-ink); border-color:var(--ui-line); }
+[data-theme=dark] .app-shell .wa-page-heading { background:linear-gradient(120deg,#183a3c,#192633); border-color:var(--ui-line); }
+[data-theme=dark] .app-shell .crm-stage { background:var(--ui-canvas); border-color:var(--ui-line); }
+[data-theme=dark] .app-shell :is(.crm-status,.crm-chip,.billing-status,.contact-blocked-label) { border:1px solid currentColor; }
+@media(max-width:900px) { .intake-grid { grid-template-columns:1fr; } .app-shell .project-card-actions { width:100%; } }
+@media(max-width:600px) {
+ .theme-control > span { display:none; } .theme-control select { min-height:40px; max-width:105px; } .app-shell .app-topbar { gap:8px; }
+ .app-shell .topbar-title > span { display:none; }
+ .app-shell :is(button,.crm-secondary,.primary-action,.wa-button) { min-height:44px; }
+ .app-shell :is(input:not([type=checkbox]):not([type=radio]),select,textarea) { font-size:16px; }
+ .app-shell .theme-control select { font-size:13px; }
+ .app-shell dialog { width:calc(100vw - 16px); max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); margin:auto; padding:16px; border-radius:14px; }
+ .app-shell .crm-table { min-width:680px; } .app-shell table td { padding:12px; }
+ .app-shell .crm-table-scroll::before { content:'Geser tabel ke samping untuk melihat kolom lainnya →'; display:block; font-size:12px; padding:10px 12px; color:var(--ui-muted); }
+ .app-shell :is(.broadcast-selection-tools,.crm-detail-actions,.project-card-actions) { display:flex; flex-wrap:wrap; gap:8px; }
+ .app-shell .broadcast-recipient { align-items:flex-start; } .app-shell .broadcast-recipient span { min-width:0; overflow-wrap:anywhere; }
+ .app-shell .broadcast-recipient input { min-width:20px; height:20px; }
+ #broadcastStageFilters label { min-height:44px; }
+}
+@media(prefers-reduced-motion:reduce) { .app-shell *, .app-shell *::before,.app-shell *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+[data-theme=dark] .app-shell :is(.crm-workspace,.wa-workspace) { --msg-teal:var(--ui-brand); --msg-ink:var(--ui-ink); --msg-muted:var(--ui-muted); --msg-line:var(--ui-line); color:var(--ui-ink); }
+[data-theme=dark] .app-shell :is(.crm-workspace .page-heading,.crm-dialog-header,.wa-columns,.wa-thread-heading,.wa-composer,.wa-time-note,.broadcast-recipient-list) { background:var(--ui-surface); border-color:var(--ui-line); }
+[data-theme=dark] .app-shell :is(.broadcast-recipient strong,.broadcast-selection-heading h3,.wa-message-text,.wa-thread-heading h2,.wa-contact-title,.wa-context-data dd,.wa-empty strong,.wa-empty-thread h2) { color:var(--ui-ink); }
+[data-theme=dark] .app-shell :is(.broadcast-recipient small,.wa-contact-preview,.wa-contact-meta,.wa-thread-heading p,.wa-field,.wa-muted,.wa-context-data dt,.wa-bubble-label,.wa-delivery) { color:var(--ui-muted); }
+[data-theme=dark] .app-shell :is(.broadcast-recipient:has(input:checked),.wa-contact-active) { background:var(--ui-soft)!important; }
+[data-theme=dark] .app-shell :is(.wa-filters a,.broadcast-selection-heading > strong) { background:var(--ui-soft); color:var(--ui-brand); border-color:var(--ui-line); }
+[data-theme=dark] .app-shell :is(.wa-button:not(.wa-button-secondary),.crm-workspace .primary-action) { background:var(--ui-brand); color:#102b2b!important; }
+[data-theme=dark] .app-shell :is(.broadcast-recipient em,.wa-send-notice[data-state=error]) { color:#ffb6aa; }
+[data-theme=dark] .app-shell .wa-send-notice[data-state=success] { color:#90e4b4; }
+@media(max-width:600px) { .app-shell .broadcast-dialog .crm-dialog-header { padding:16px; } .app-shell .broadcast-dialog .crm-dialog-body { padding:12px; } }
+[data-theme=dark] .app-shell :is(.workspace-stat,.workspace-welcome,.project-quota-note,.table-scroll-hint,.sidebar-close,.sidebar-toggle,.crm-view-switch,.crm-pipeline-heading > span,.crm-pipeline-card) { background:var(--ui-surface); color:var(--ui-ink); border-color:var(--ui-line); }
+[data-theme=dark] .app-shell .crm-pipeline-column { background:var(--ui-canvas); }
+[data-theme=dark] .app-shell :is(.crm-view-switch a[aria-current],.crm-pipeline-column.is-drop-target) { background:var(--ui-soft); color:var(--ui-brand); }
+[data-theme=dark] .app-shell :is(.crm-pipeline-heading h2,.crm-pipeline-value,.crm-detail-heading h2) { color:var(--ui-ink); }
+[data-theme=dark] .app-shell :is(.crm-pipeline-due,.crm-pipeline-empty,.crm-pipeline-intro,.crm-detail-meta) { color:var(--ui-muted); }
+.app-shell .crm-table-scroll { max-height:min(70dvh,760px); }
+[data-theme=dark] .app-shell .brand-mark { color:#102b2b; }

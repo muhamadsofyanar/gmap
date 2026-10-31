@@ -22,9 +22,15 @@
     const selected=new Set();let recipients=[],loaded=false,loading=false,composeInitialized=false;
     const recipientList=document.getElementById('broadcastRecipientList');
     const recipientSearch=document.getElementById('broadcastRecipientSearch');
-    function filteredRecipients(){const q=recipientSearch.value.trim().toLocaleLowerCase();return recipients.filter(r=>`${r.name} ${r.number}`.toLocaleLowerCase().includes(q));}
+    const stageInputs=[...document.querySelectorAll('#broadcastStageFilters input')];
+    const chosenStages=()=>stageInputs.filter(input=>input.checked).map(input=>input.value);
+    function filteredRecipients(){const q=recipientSearch.value.trim().toLocaleLowerCase();const stages=chosenStages();return recipients.filter(r=>(!stages.length || stages.includes(r.stage)) && `${r.name} ${r.number}`.toLocaleLowerCase().includes(q));}
     function renderRecipients(){
         recipientList.replaceChildren();
+        const stages=chosenStages();
+        const scoped=recipients.filter(r=>!stages.length || stages.includes(r.stage));
+        const valid=scoped.filter(r=>r.eligible);const numbers=new Set(valid.map(r=>r.number));
+        document.getElementById('broadcastEligibilitySummary').textContent=`${scoped.length} kontak pada tahap terpilih · ${numbers.size} nomor unik valid · ${valid.length-numbers.size} duplikat · ${scoped.length-valid.length} tidak dapat dihubungi. ${filteredRecipients().length} cocok dengan pencarian.`;
         for(const item of filteredRecipients()){
             const label=document.createElement('label');label.className='broadcast-recipient';
             const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=String(item.id);checkbox.checked=selected.has(item.id);checkbox.disabled=!item.eligible;
@@ -37,14 +43,15 @@
         document.getElementById('broadcastSelectionCount').textContent=`${selected.size} dipilih`;
     }
     async function loadRecipients(){
-        if(loading || batch)return;loading=true;loaded=false;recipientList.textContent='Memuat kontak...';
+        if(loading || batch)return;loading=true;loaded=false;recipientList.setAttribute('aria-busy','true');recipientList.textContent='Memuat kontak...';
         try{
             const response=await fetch(`${workspace.dataset.api}/broadcastRecipients?project_id=${encodeURIComponent(prepare.dataset.project)}`,{headers:{Accept:'application/json'}});
             const data=await response.json();if(!response.ok || !data.success)throw new Error(data.message || 'Daftar kontak gagal dimuat.');
             recipients=data.recipients;const available=new Set(recipients.filter(r=>r.eligible).map(r=>r.id));for(const id of selected)if(!available.has(id))selected.delete(id);
             loaded=true;renderRecipients();
-        }catch(error){recipientList.textContent=error.message;}finally{loading=false;}
+        }catch(error){recipientList.textContent=error.message;}finally{loading=false;recipientList.removeAttribute('aria-busy');}
     }
+    stageInputs.forEach(input=>input.addEventListener('change',()=>{if(batch)return;selected.clear();renderRecipients();}));
     recipientSearch.addEventListener('input',renderRecipients);
     document.getElementById('broadcastSelectVisible').addEventListener('click',()=>{filteredRecipients().filter(r=>r.eligible).forEach(r=>selected.add(r.id));renderRecipients();});
     document.getElementById('broadcastClearSelection').addEventListener('click',()=>{selected.clear();renderRecipients();});
@@ -94,6 +101,7 @@
     });
 
     function showProgress() {
+        stageInputs.forEach(input=>{input.disabled=true;});
         compose.hidden = true;
         panel.hidden = false;
         if (!dialog.open) dialog.showModal();
@@ -134,7 +142,7 @@
         composeNotice.hidden = true;
         prepare.textContent = 'Menyiapkan penerima...';
         try {
-            const payload=new URLSearchParams(values);payload.set('recipient_ids_json',JSON.stringify([...selected]));payload.set('selection_count',String(selected.size));
+            const payload=new URLSearchParams(values);payload.set('recipient_ids_json',JSON.stringify([...selected]));payload.set('selection_count',String(selected.size));payload.set('stage_filters_json',JSON.stringify(chosenStages()));
             const value = await request('prepareBroadcast', payload);
             // Keep the local copy in sync so the CRM table links use the saved text.
             if (values.save_template) selectedTemplate().body = body.value.trim();

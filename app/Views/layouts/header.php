@@ -35,6 +35,9 @@ $navIcons = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#056b71">
+    <script nonce="<?= e(csp_nonce()) ?>">
+    (()=>{let preference='system';try{const saved=localStorage.getItem('legaone-theme');if(['light','dark','system'].includes(saved))preference=saved;}catch(_){}document.documentElement.dataset.theme=preference==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):preference;})();
+    </script>
     <title><?= e($pageTitle ?? $appBrand) ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/css/tailwind.css?v=b2b-1') ?>">
     <script nonce="<?= e(csp_nonce()) ?>">
@@ -52,7 +55,9 @@ $navIcons = [
     <script src="<?= e(base_url('assets/js/account.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/extras.js?v=2')) ?>" defer></script>
 <?php if(in_array($activeSection,['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/inbox.css?v=1.4.0')) ?>"><?php endif ?>
-<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?></head>
+<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?><link rel="stylesheet" href="<?= e(base_url('assets/css/appearance.css?v=1.5.0')) ?>">
+<script src="<?= e(base_url('assets/js/appearance.js?v=1.5.0')) ?>" defer></script>
+</head>
 <body class="app-shell">
     <a href="#main-content" class="skip-link">Langsung ke konten</a>
     <button id="sidebarBackdrop" class="sidebar-backdrop" type="button" aria-label="Tutup menu navigasi" tabindex="-1" hidden></button>
@@ -92,6 +97,7 @@ $navIcons = [
             </button>
             <div class="topbar-title"><small class="mobile-product"><?= e($appBrand) ?></small><span>Workspace</span><span aria-hidden="true">/</span><strong><?= e($pageSectionLabel) ?></strong></div>
         </div>
+        <label class="theme-control"><span>Tema</span><select data-theme-picker aria-label="Tema tampilan"><option value="system">Perangkat</option><option value="light">Terang</option><option value="dark">Gelap</option></select></label>
         <details class="account-dropdown" id="accountDropdown">
             <summary class="account-avatar" aria-label="Menu akun <?= e($accountName) ?>" title="Menu akun" aria-expanded="false" aria-controls="accountMenu"><?= e($accountInitial) ?></summary>
             <div class="account-menu" id="accountMenu">

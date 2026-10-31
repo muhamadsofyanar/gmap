@@ -1,3 +1,9 @@
+# LegaOne v1.5.0
+
+Impor proyek CSV/XLSX, pilihan tahap pipeline untuk broadcast, dan tema terang/gelap/perangkat. Baca **PANDUAN_UPDATE_v1.5.0.md** untuk pemasangan dan batasan pengujian.
+
+---
+
 # Pembaruan 1.2.0 — Kotak Masuk Starsender Premium
 
 Paket ini melanjutkan versi tim Coolify di bawah. Panduan fitur baru dan pembaruan instalasi: [docs/STARSENDER_INBOX.md](docs/STARSENDER_INBOX.md). Baca bagian tersebut terlebih dahulu jika database versi tim sudah berisi data. Untuk instalasi baru, gunakan panduan dasar di bawah lalu aktifkan webhook opsional.

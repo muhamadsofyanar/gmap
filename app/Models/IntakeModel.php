@@ -13,7 +13,10 @@ class IntakeModel
     public function draft(string $token, int $project, string $name, array $payload, string $source): void
     {
         if (!preg_match('/^[a-f0-9]{32}$/D',$token)) throw new \InvalidArgumentException('Muat ulang formulir.');
-        if ($project && !(new ProjectModel())->getProjectById($project)) throw new \InvalidArgumentException('Proyek tidak ditemukan.');
+        if ($project) {
+            $target=(new ProjectModel())->getProjectById($project);
+            if (!$target || (int)($target['workspace_id']??0)!==1)throw new \InvalidArgumentException('Proyek tidak ditemukan.');
+        }
         if (!$project && ($name==='' || mb_strlen($name)>200)) throw new \InvalidArgumentException('Isi nama proyek baru (maksimal 200 karakter).');
         $json=json_encode($payload,JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
         if (strlen($json)>8*1024*1024) throw new \InvalidArgumentException('Isi data terlalu besar. Pecah file menjadi beberapa bagian.');
@@ -105,7 +108,7 @@ class IntakeModel
             if ($batch['result']) { $this->db->commit(); return json_decode($batch['result'],true,512,JSON_THROW_ON_ERROR); }
             $project=(int)$batch['project_id'];
             if ($project) {
-                $q=$this->db->prepare('SELECT id FROM projects WHERE id=? FOR UPDATE'); $q->execute([$project]);
+                $q=$this->db->prepare('SELECT id FROM projects WHERE id=? AND workspace_id=1 FOR UPDATE'); $q->execute([$project]);
                 if (!$q->fetchColumn()) throw new \InvalidArgumentException('Proyek sudah tidak tersedia.');
             }
             $review=$this->review($batch); $valid=[];
@@ -114,7 +117,7 @@ class IntakeModel
             if (!$project) {
                 $this->db->prepare("INSERT INTO projects (name,keyword,location,total_leads,status) VALUES (?,'Prospek tambahan','',0,'active')")->execute([$batch['project_name']]); $project=(int)$this->db->lastInsertId();
             }
-            $q=$this->db->prepare('INSERT INTO project_leads (project_id,shop_name,phone,whatsapp,address,category,website,gmap_url,notes) VALUES (?,?,?,?,?,?,?,?,?)');
+            $q=$this->db->prepare('INSERT INTO project_leads (project_id,shop_name,phone,whatsapp,address,category,website,gmap_url,notes,in_crm,workspace_id) VALUES (?,?,?,?,?,?,?,?,?,0,1)');
             $source=$this->db->prepare('INSERT INTO crm_lead_sources (lead_id,source) VALUES (?,?)');
             foreach ($valid as $row) { $q->execute([$project,$row['shop_name'],$row['phone'],$row['phone'],$row['address'],$row['category'],$row['website'],$row['gmap_url'],$row['notes']]); $source->execute([(int)$this->db->lastInsertId(),$batch['source']]); }
             $this->db->prepare('UPDATE projects SET total_leads=(SELECT COUNT(*) FROM project_leads WHERE project_id=?) WHERE id=?')->execute([$project,$project]);

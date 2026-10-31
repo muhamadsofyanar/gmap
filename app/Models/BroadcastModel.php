@@ -32,19 +32,32 @@ class BroadcastModel
         $payload=json_decode($row['recipients'],true,512,JSON_THROW_ON_ERROR);
         // v1.4 stores intent alongside recipients; old array snapshots remain readable.
         $row['intent_hash']=$payload['intent_hash'] ?? null;
+        $row['stage_filters']=$payload['stage_filters'] ?? [];
         $row['recipients']=$payload['recipients'] ?? $payload;
         return $row;
     }
 
-    public function candidates(int $projectId): array
+    /** An empty list means all CRM stages in this project. */
+    public static function stageFilters(array $stages): array
     {
-        $stmt=Database::getInstance()->prepare('SELECT l.id,l.shop_name,l.phone,l.whatsapp,p.name AS project_name FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.project_id=? AND l.in_crm=1 AND l.workspace_id=1 AND p.workspace_id=1 ORDER BY l.id');
-        $stmt->execute([$projectId]);
+        if (!array_is_list($stages) || count($stages)>count(CrmModel::STAGES)) throw new \InvalidArgumentException('Filter tahap pipeline tidak valid.');
+        foreach ($stages as $stage) if (!is_string($stage) || !isset(CrmModel::STAGES[$stage])) throw new \InvalidArgumentException('Tahap pipeline tidak dikenal. Muat ulang daftar.');
+        $stages=array_values(array_unique($stages)); sort($stages,SORT_STRING); return $stages;
+    }
+
+    public function candidates(int $projectId, array $stages=[]): array
+    {
+        $stages=self::stageFilters($stages);
+        $sql='SELECT l.id,l.shop_name,l.phone,l.whatsapp,l.lead_status,p.name AS project_name FROM project_leads l JOIN projects p ON p.id=l.project_id WHERE l.project_id=? AND l.in_crm=1 AND l.workspace_id=1 AND p.workspace_id=1';
+        if ($stages) $sql.=' AND l.lead_status IN ('.implode(',',array_fill(0,count($stages),'?')).')';
+        $stmt=Database::getInstance()->prepare($sql.' ORDER BY l.id');
+        $stmt->execute(array_merge([$projectId],$stages));
         return ContactPolicy::annotate($stmt->fetchAll());
     }
 
-    public function prepare(string $token, int $projectId, array $template, bool $markContacted = false, array $selected = []): array
+    public function prepare(string $token, int $projectId, array $template, bool $markContacted = false, array $selected = [], array $stages = []): array
     {
+        $stages=self::stageFilters($stages);
         if(!$selected || count($selected)>5000) throw new \InvalidArgumentException('Pilih 1 sampai 5.000 penerima broadcast.');
         $ids=[];
         foreach($selected as $id){
@@ -52,8 +65,10 @@ class BroadcastModel
             $ids[(int)$id]=true;
         }
         $canonical=array_keys($ids);sort($canonical,SORT_NUMERIC);
-        $intent=hash('sha256',json_encode([$canonical,$template['body'],(int)$template['id'],$markContacted],JSON_THROW_ON_ERROR));
-        $leads=array_values(array_filter($this->candidates($projectId),static fn($l)=>isset($ids[(int)$l['id']])));
+        $intentData=[$canonical,$template['body'],(int)$template['id'],$markContacted];
+        if($stages)$intentData[]=$stages; // Preserve v1.4 intent when no stage filter is supplied.
+        $intent=hash('sha256',json_encode($intentData,JSON_THROW_ON_ERROR));
+        $leads=array_values(array_filter($this->candidates($projectId,$stages),static fn($l)=>isset($ids[(int)$l['id']])));
         if(count($leads)!==count($ids)) throw new \InvalidArgumentException('Penerima berubah atau bukan prospek CRM proyek ini. Muat ulang daftar.');
         $recipients=[];$seen=[];$invalid=0;$duplicates=0;
         foreach($leads as $lead){
@@ -73,8 +88,8 @@ class BroadcastModel
         }
         $db=Database::getInstance();$prefix=$db->getAttribute(\PDO::ATTR_DRIVER_NAME)==='sqlite'?'INSERT OR IGNORE':'INSERT IGNORE';
         $insert=$db->prepare($prefix.' INTO whatsapp_broadcasts (token,project_id,template_id,template_name,recipients,total,invalid_count,duplicate_count,mark_contacted) VALUES (?,?,?,?,?,?,?,?,?)');
-        $insert->execute([$token,$projectId,$template['id'],$template['name'],json_encode(['intent_hash'=>$intent,'recipients'=>$recipients],JSON_THROW_ON_ERROR),count($leads),$invalid,$duplicates,(int)$markContacted]);
-        if(!$insert->rowCount())return $this->prepare($token,$projectId,$template,$markContacted,$selected);
+        $insert->execute([$token,$projectId,$template['id'],$template['name'],json_encode(['intent_hash'=>$intent,'recipients'=>$recipients,'stage_filters'=>$stages],JSON_THROW_ON_ERROR),count($leads),$invalid,$duplicates,(int)$markContacted]);
+        if(!$insert->rowCount())return $this->prepare($token,$projectId,$template,$markContacted,$selected,$stages);
         return $this->find($token);
     }
 

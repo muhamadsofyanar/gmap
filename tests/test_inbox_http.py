@@ -110,6 +110,64 @@ class InboxHTTP(unittest.TestCase):
         with sqlite3.connect(self.db) as db:
             batch=json.loads(db.execute('SELECT recipients FROM whatsapp_broadcasts WHERE token=?',('f'*32,)).fetchone()[0])
             self.assertEqual([r['id'] for r in batch['recipients']],[10])
+    def test_pipeline_stage_validation(self):
+        from urllib.parse import urlencode
+        c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        items=json.load(c.open(self.base+'/crm/broadcastRecipients?project_id=1'))['recipients']
+        self.assertTrue(all('stage' in item for item in items))
+        values={'project_id':1,'template_id':0,'body':'Stage test','token':'6'*32,'recipient_ids_json':'[10]','selection_count':1,'_csrf_token':csrf}
+        for filters in ['["invalid"]','["contacted"]','{}','null','bad']:
+            values['stage_filters_json']=filters
+            # Empty objects must be rejected, rather than interpreted as all stages.
+            with self.assertRaises(HTTPError) as ctx:c.open(Request(self.base+'/crm/prepareBroadcast',data=urlencode(values).encode(),headers={'Accept':'application/json'}))
+            self.assertEqual(ctx.exception.code,422)
+        values['stage_filters_json']='["new"]'
+        result=json.load(c.open(Request(self.base+'/crm/prepareBroadcast',data=urlencode(values).encode(),headers={'Accept':'application/json'})))
+        self.assertEqual(result['broadcast']['eligible'],1)
+    def test_project_import_upload_map_commit(self):
+        from urllib.parse import urlencode, urlparse, parse_qs
+        from urllib.request import HTTPRedirectHandler
+        c=self.client(1);html=c.open(self.base+'/intake?project_id=1').read().decode()
+        csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        boundary='TestImportBoundary'
+        parts=[]
+        for key,value in {'project_id':'1','project_name':'','_csrf_token':csrf}.items():
+            parts.append('--'+boundary+'\r\nContent-Disposition: form-data; name="'+key+'"\r\n\r\n'+value+'\r\n')
+        parts.append('--'+boundary+'\r\nContent-Disposition: form-data; name="file"; filename="test.csv"\r\nContent-Type: text/csv\r\n\r\nNama bisnis,Telepon / WhatsApp\nUpload Contact,081234567899\nUpload Duplicate,081234567899\nInvalid Contact,nope\n\r\n--'+boundary+'--\r\n')
+        response=c.open(Request(self.base+'/intake/upload',data=''.join(parts).encode(),headers={'Content-Type':'multipart/form-data; boundary='+boundary}))
+        self.assertIn('/intake/mapping?',response.url)
+        token=parse_qs(urlparse(response.url).query)['token'][0]
+        data=urlencode({'token':token,'mapping[shop_name]':'0','mapping[phone]':'1','_csrf_token':csrf})
+        review=c.open(Request(self.base+'/intake/preview',data=data.encode())).read().decode()
+        self.assertIn('1 baris siap diimpor',review)
+        data=urlencode({'token':token,'selected_json':'["0","1","2"]','_csrf_token':csrf})
+        response=c.open(Request(self.base+'/intake/commit',data=data.encode()))
+        self.assertIn('/projects/viewProject/1',response.url)
+        response.close()
+        with sqlite3.connect(self.db) as db:
+            saved=db.execute("SELECT phone,in_crm,project_id FROM project_leads WHERE shop_name='Upload Contact'").fetchall()
+            self.assertEqual(saved,[('6281234567899',0,1)])
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM project_leads WHERE shop_name IN ('Upload Duplicate','Invalid Contact')").fetchone()[0],0)
+    def test_project_import_entrypoints(self):
+        c=self.client(1)
+        html=c.open(self.base+'/intake?project_id=1').read().decode()
+        self.assertIn('id="intake-import"',html)
+        self.assertIn('enctype="multipart/form-data"',html)
+        self.assertIn('value="1" selected',html)
+        example=c.open(self.base+'/intake/example').read().decode('utf-8-sig')
+        self.assertIn('Nama bisnis',example)
+        with self.assertRaises(HTTPError) as ctx:self.client(2).open(self.base+'/intake/example')
+        self.assertEqual(ctx.exception.code,403)
+    def test_import_review_report_escapes_formulas(self):
+        c=self.client(1);batch_token='5'*32
+        payload={'headers':['Nama bisnis','Telepon / WhatsApp'], 'rows':[['=SUM(1,2)','081234567892'],['Invalid','bad']]}
+        with sqlite3.connect(self.db) as db:
+            db.execute("INSERT INTO crm_intake_batches(token,project_id,payload,mapping,created_at) VALUES(?,?,?,?,datetime('now','+7 hours'))",(batch_token,1,json.dumps(payload),json.dumps({'shop_name':0,'phone':1})))
+        result=c.open(self.base+'/intake/report?token='+batch_token)
+        self.assertIn('no-store',result.headers.get('Cache-Control'))
+        report=result.read().decode('utf-8-sig')
+        self.assertIn("'=SUM",report);self.assertIn('Dilewati',report)
     def test_large_selection_json_not_truncated(self):
         c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
         csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)

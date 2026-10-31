@@ -19,6 +19,37 @@
     const templates = JSON.parse(document.getElementById('crmTemplatesData').textContent);
     const storageKey = `crm-broadcast:${workspace.dataset.api}:${prepare.dataset.project}`;
     let batch = null, running = false, stop = false;
+    const selected=new Set();let recipients=[],loaded=false,loading=false,composeInitialized=false;
+    const recipientList=document.getElementById('broadcastRecipientList');
+    const recipientSearch=document.getElementById('broadcastRecipientSearch');
+    function filteredRecipients(){const q=recipientSearch.value.trim().toLocaleLowerCase();return recipients.filter(r=>`${r.name} ${r.number}`.toLocaleLowerCase().includes(q));}
+    function renderRecipients(){
+        recipientList.replaceChildren();
+        for(const item of filteredRecipients()){
+            const label=document.createElement('label');label.className='broadcast-recipient';
+            const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=String(item.id);checkbox.checked=selected.has(item.id);checkbox.disabled=!item.eligible;
+            checkbox.addEventListener('change',()=>{checkbox.checked?selected.add(item.id):selected.delete(item.id);document.getElementById('broadcastSelectionCount').textContent=`${selected.size} dipilih`;});
+            const copy=document.createElement('span');const name=document.createElement('strong');name.textContent=item.name;
+            const number=document.createElement('small');number.textContent=item.number || 'Nomor belum tersedia';copy.append(name,number);
+            label.append(checkbox,copy);if(item.reason){const reason=document.createElement('em');reason.textContent=item.reason;label.append(reason);}recipientList.append(label);
+        }
+        if(!recipientList.children.length){const empty=document.createElement('p');empty.textContent='Tidak ada kontak sesuai pencarian.';recipientList.append(empty);}
+        document.getElementById('broadcastSelectionCount').textContent=`${selected.size} dipilih`;
+    }
+    async function loadRecipients(){
+        if(loading || batch)return;loading=true;loaded=false;recipientList.textContent='Memuat kontak...';
+        try{
+            const response=await fetch(`${workspace.dataset.api}/broadcastRecipients?project_id=${encodeURIComponent(prepare.dataset.project)}`,{headers:{Accept:'application/json'}});
+            const data=await response.json();if(!response.ok || !data.success)throw new Error(data.message || 'Daftar kontak gagal dimuat.');
+            recipients=data.recipients;const available=new Set(recipients.filter(r=>r.eligible).map(r=>r.id));for(const id of selected)if(!available.has(id))selected.delete(id);
+            loaded=true;renderRecipients();
+        }catch(error){recipientList.textContent=error.message;}finally{loading=false;}
+    }
+    recipientSearch.addEventListener('input',renderRecipients);
+    document.getElementById('broadcastSelectVisible').addEventListener('click',()=>{filteredRecipients().filter(r=>r.eligible).forEach(r=>selected.add(r.id));renderRecipients();});
+    document.getElementById('broadcastClearSelection').addEventListener('click',()=>{selected.clear();renderRecipients();});
+    document.getElementById('broadcastReloadRecipients').addEventListener('click',loadRecipients);
+
     function remember(token) { try { token ? localStorage.setItem(storageKey, token) : localStorage.removeItem(storageKey); } catch (_) {} }
     async function request(action, values) {
         const response = await fetch(`${workspace.dataset.api}/${action}`, {
@@ -35,7 +66,7 @@
     const selectedTemplate = () => templates.find(item => String(item.id) === template.value);
     // Offer to save only when the text differs from the stored template.
     function showSaveOption() {
-        saveRow.hidden = body.value.trim() === (selectedTemplate()?.body || '').trim();
+        saveRow.hidden = !selectedTemplate() || body.value.trim() === (selectedTemplate()?.body || '').trim();
     }
     function loadTemplate() {
         body.value = selectedTemplate()?.body || '';
@@ -53,11 +84,12 @@
     });
     body.addEventListener('input', showSaveOption);
     openButton?.addEventListener('click', () => {
-        if (!batch) {
+        if (!batch && !composeInitialized) {
             template.dataset.current = template.value;
-            loadTemplate();
+            loadTemplate();composeInitialized=true;
         }
         dialog.showModal();
+        if(!batch && !loaded)loadRecipients();
         (batch ? start : body).focus();
     });
 
@@ -86,6 +118,7 @@
     }
     prepare.addEventListener('click', async () => {
         if (running || prepare.disabled) return;
+        if(!loaded || !selected.size){composeNotice.textContent='Pilih minimal satu penerima dari daftar yang berhasil dimuat.';composeNotice.hidden=false;return;}
         if (!body.value.trim()) {
             composeNotice.textContent = 'Isi pesan tidak boleh kosong.';
             composeNotice.hidden = false;
@@ -101,7 +134,8 @@
         composeNotice.hidden = true;
         prepare.textContent = 'Menyiapkan penerima...';
         try {
-            const value = await request('prepareBroadcast', values);
+            const payload=new URLSearchParams(values);payload.set('recipient_ids_json',JSON.stringify([...selected]));payload.set('selection_count',String(selected.size));
+            const value = await request('prepareBroadcast', payload);
             // Keep the local copy in sync so the CRM table links use the saved text.
             if (values.save_template) selectedTemplate().body = body.value.trim();
             render(value);

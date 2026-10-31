@@ -107,7 +107,7 @@ class CrmController extends Controller
     protected function crmLead(int $id): array
     {
         $lead = $id > 0 ? $this->crmModel->getLeadById($id) : null;
-        if (!$lead || !(int)$lead['in_crm']) {
+        if (!$lead || !(int)$lead['in_crm'] || (int)($lead['workspace_id'] ?? 0)!==1 || (int)(($this->projectModel->getProjectById((int)$lead['project_id']))['workspace_id'] ?? 0)!==1) {
             $this->json(['success' => false, 'message' => 'Prospek tidak ditemukan di CRM.'], 404);
         }
         return $lead;
@@ -130,18 +130,20 @@ class CrmController extends Controller
         $this->requireAuth();
         $this->validateCsrf();
         $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $templateId = filter_var($_POST['template_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $templateId = filter_var($_POST['template_id'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
         $token = $_POST['request_token'] ?? '';
         $preview = $_POST['message'] ?? null;
-        if (!$id || !$templateId || !is_string($token) || !preg_match('/^[a-f0-9]{32}$/D', $token) || !is_string($preview)) {
+        if (!$id || $templateId === false || !is_string($token) || !preg_match('/^[a-f0-9]{32}$/D', $token) || !is_string($preview)) {
             $this->json(['success' => false, 'message' => 'Permintaan pengiriman tidak valid. Muat ulang halaman.'], 422);
         }
         $lead = $this->crmLead($id);
         if (\App\Models\ContactPolicy::blocked($lead)) $this->json(['success'=>false,'message'=>'Prospek ditandai Jangan dihubungi. Pengiriman dibatalkan.'],422);
-        $templates = array_column((new \App\Models\MessageTemplateModel())->all(), null, 'id');
-        if (!isset($templates[$templateId])) $this->json(['success' => false, 'message' => 'Template tidak ditemukan. Muat ulang halaman.'], 422);
-        $message = \App\Models\MessageTemplateModel::render($templates[$templateId]['body'], $lead['shop_name'], $lead['project_name']);
-        if ($preview !== $message) $this->json(['success' => false, 'message' => 'Template atau data prospek telah berubah. Muat ulang untuk meninjau pesan terbaru.'], 409);
+        try {$message=\App\Services\MessageDraft::text($preview);}
+        catch(\InvalidArgumentException $e){$this->json(['success'=>false,'message'=>$e->getMessage()],422);}
+        if($templateId>0){
+            $templates=array_column((new \App\Models\MessageTemplateModel())->all(),null,'id');
+            if(!isset($templates[$templateId]))$this->json(['success'=>false,'message'=>'Template tidak ditemukan. Pilih Pesan bebas.'],422);
+        }
         $model = new \App\Models\GatewayModel();
         try {
             $number = \App\Models\GatewayModel::phone($lead['whatsapp'] ?: ($lead['phone'] ?? ''));
@@ -174,38 +176,57 @@ class CrmController extends Controller
         $this->json(['success' => true, 'delivery_status' => $status, 'message' => $messages[$status] ?? $messages['unknown']]);
     }
 
-    public function prepareBroadcast(): void
+    public function broadcastRecipients(): void
     {
         $this->requireAuth();
-        $this->validateCsrf();
-        $projectId = filter_var($_POST['project_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $templateId = filter_var($_POST['template_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $token = $_POST['token'] ?? '';
-        if (!$projectId || !$templateId || !is_string($token) || !preg_match('/^[a-f0-9]{32}$/D', $token)) {
-            $this->json(['success' => false, 'message' => 'Data broadcast tidak valid.'], 422);
+        $projectId=filter_var($_GET['project_id'] ?? null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        $project=$projectId?$this->projectModel->getProjectById($projectId):null;
+        if(!$project || (int)$project['workspace_id']!==1)$this->json(['success'=>false,'message'=>'Proyek tidak ditemukan.'],404);
+        $items=[];
+        foreach((new \App\Models\BroadcastModel())->candidates($projectId) as $lead){
+            $number='';$reason='';
+            try{$number=\App\Models\GatewayModel::phone($lead['whatsapp'] ?: ($lead['phone'] ?? ''));}
+            catch(\InvalidArgumentException $e){$reason='Nomor tidak valid';}
+            if($lead['contact_blocked'])$reason='Jangan dihubungi';
+            $items[]=['id'=>(int)$lead['id'],'name'=>$lead['shop_name'],'number'=>$number,'eligible'=>$reason==='','reason'=>$reason];
         }
-        if (!$this->projectModel->getProjectById($projectId)) $this->json(['success' => false, 'message' => 'Proyek tidak ditemukan.'], 404);
-        $templates = array_column((new \App\Models\MessageTemplateModel())->all(), null, 'id');
-        if (!isset($templates[$templateId])) $this->json(['success' => false, 'message' => 'Template tidak ditemukan.'], 422);
-        // The text reviewed in the broadcast dialog is what gets sent; optionally it also updates the template.
-        $body = $_POST['body'] ?? null;
-        if ($body !== null) {
-            try {
-                if (!is_string($body)) throw new \InvalidArgumentException('Pesan tidak valid.');
-                $templates[$templateId]['body'] = \App\Models\MessageTemplateModel::validateBody($body);
-                if (($_POST['save_template'] ?? '') === '1') (new \App\Models\MessageTemplateModel())->save($templateId, $templates[$templateId]['name'], $templates[$templateId]['body']);
-            } catch (\InvalidArgumentException $e) { $this->json(['success' => false, 'message' => $e->getMessage()], 422); }
+        $this->json(['success'=>true,'recipients'=>$items]);
+    }
+
+    public function prepareBroadcast(): void
+    {
+        $this->requireAuth();$this->validateCsrf();
+        $projectId=filter_var($_POST['project_id'] ?? null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        $templateId=filter_var($_POST['template_id'] ?? 0,FILTER_VALIDATE_INT,['options'=>['min_range'=>0]]);
+        $token=$_POST['token'] ?? '';$selected=null;
+        if(isset($_POST['recipient_ids_json'])){
+            $encoded=$_POST['recipient_ids_json'];$count=filter_var($_POST['selection_count'] ?? null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>5000]]);
+            try{$selected=is_string($encoded) && strlen($encoded)<=80000?json_decode($encoded,true,16,JSON_THROW_ON_ERROR):null;}
+            catch(\JsonException $e){$selected=null;}
+            if(!is_array($selected) || !array_is_list($selected) || $count===false || count($selected)!==$count)$this->json(['success'=>false,'message'=>'Daftar penerima tidak lengkap. Muat ulang pilihan.'],422);
         }
-        try {
+        if(!$projectId || $templateId===false || !is_string($token) || !preg_match('/^[a-f0-9]{32}$/D',$token) || !is_array($selected))
+            $this->json(['success'=>false,'message'=>'Pilih penerima dan isi pesan broadcast.'],422);
+        $project=$this->projectModel->getProjectById($projectId);
+        if(!$project || (int)$project['workspace_id']!==1)$this->json(['success'=>false,'message'=>'Proyek tidak ditemukan.'],404);
+        try{
+            $body=$_POST['body'] ?? '';if(!is_string($body))throw new \InvalidArgumentException('Pesan tidak valid.');
+            $body=\App\Models\MessageTemplateModel::validateBody($body);
+            $template=['id'=>0,'name'=>'Pesan bebas','body'=>$body];
+            if($templateId>0){
+                $templates=array_column((new \App\Models\MessageTemplateModel())->all(),null,'id');
+                if(!isset($templates[$templateId]))throw new \InvalidArgumentException('Template tidak ditemukan.');
+                $template=['id'=>$templateId,'name'=>$templates[$templateId]['name'],'body'=>$body];
+            }
             (new \App\Models\GatewayModel())->credentials();
-            $model = new \App\Models\BroadcastModel();
-            $batch = $model->prepare($token, $projectId, $templates[$templateId], ($_POST['mark_contacted'] ?? '') === '1');
-            $progress = $model->progress($batch);
-        } catch (\Throwable $e) {
-            $this->json(['success' => false, 'message' => 'Broadcast belum dapat disiapkan. Periksa pengaturan gateway dan coba lagi.'], 422);
-        }
-        unset($progress['next']);
-        $this->json(['success' => true, 'broadcast' => $progress]);
+            $model=new \App\Models\BroadcastModel();
+            $batch=$model->prepare($token,$projectId,$template,($_POST['mark_contacted'] ?? '')==='1',$selected);
+            $progress=$model->progress($batch);
+            // Saving is opt-in and only after the entire selection has been validated.
+            if($templateId>0 && ($_POST['save_template'] ?? '')==='1')(new \App\Models\MessageTemplateModel())->save($templateId,$template['name'],$body);
+        }catch(\InvalidArgumentException $e){$this->json(['success'=>false,'message'=>$e->getMessage()],422);}
+        catch(\Throwable $e){$this->json(['success'=>false,'message'=>'Broadcast belum dapat disiapkan. Periksa pengaturan gateway.'],422);}
+        unset($progress['next']);$this->json(['success'=>true,'broadcast'=>$progress]);
     }
 
     public function broadcastStep(): void
@@ -216,7 +237,7 @@ class CrmController extends Controller
         if (!is_string($token) || !preg_match('/^[a-f0-9]{32}$/D', $token)) $this->json(['success' => false, 'message' => 'Broadcast tidak valid.'], 422);
         $model = new \App\Models\BroadcastModel();
         $batch = $model->find($token);
-        if (!$batch) $this->json(['success' => false, 'message' => 'Broadcast tidak ditemukan.'], 404);
+        if (!$batch || (int)(($this->projectModel->getProjectById((int)$batch['project_id']))['workspace_id'] ?? 0)!==1) $this->json(['success' => false, 'message' => 'Broadcast tidak ditemukan.'], 404);
         $progress = $model->progress($batch);
         if (($_POST['send'] ?? '0') === '1' && $progress['next']) {
             $recipient = $progress['next'];
@@ -224,7 +245,7 @@ class CrmController extends Controller
             try { $credentials = $gateway->credentials(); }
             catch (\Throwable $e) { $this->json(['success' => false, 'message' => 'Gateway tidak aktif atau belum siap. Broadcast dijeda.'], 422); }
             $lead = $this->crmModel->getLeadById($recipient['id']);
-            $valid = $lead && (int)$lead['in_crm'] && (int)$lead['project_id'] === (int)$batch['project_id'] && !\App\Models\ContactPolicy::blocked($lead);
+            $valid = $lead && (int)($lead['workspace_id'] ?? 0)===1 && (int)$lead['in_crm'] && (int)$lead['project_id'] === (int)$batch['project_id'] && !\App\Models\ContactPolicy::blocked($lead);
             try { $valid = $valid && \App\Models\GatewayModel::phone($lead['whatsapp'] ?: ($lead['phone'] ?? '')) === $recipient['number']; }
             catch (\InvalidArgumentException $e) { $valid = false; }
             $reservation = $gateway->reserve($recipient['token'], $recipient['id'], (int)$batch['template_id'], $recipient['number'], $recipient['message']);

@@ -4,7 +4,7 @@ $phone = format_whatsapp($lead['whatsapp'] ?: $lead['phone']);
 $contactBlocked = $contactBlocked ?? false;
 $canContact = !$contactBlocked && preg_match('/^[1-9][0-9]{7,14}$/', $phone);
 $templateMap = array_column($templates, null, 'id');
-$selectedTemplate = isset($templateMap[$selectedTemplate]) ? $selectedTemplate : (int)($templates[0]['id'] ?? 0);
+$selectedTemplate = isset($templateMap[$selectedTemplate]) ? $selectedTemplate : 0;
 $message = \App\Models\MessageTemplateModel::render($templateMap[$selectedTemplate]['body'] ?? '', $lead['shop_name'], $lead['project_name']);
 $validUrl = static fn($url) => is_string($url) && filter_var($url, FILTER_VALIDATE_URL) && in_array(strtolower(parse_url($url, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true);
 $actions = ['profile_updated'=>'PIC & label diperbarui','task_scheduled'=>'Follow-up dijadwalkan','task_completed'=>'Aktivitas selesai','order_recorded'=>'Pembelian dicatat','moved_to_crm' => 'Ditambahkan ke CRM', 'status_change' => 'Status diperbarui', 'note_added' => 'Catatan', 'deal_updated' => 'Nilai deal diperbarui', 'whatsapp_opened' => 'Tautan WhatsApp dibuka', 'whatsapp_outreach' => 'Aktivitas WhatsApp (historis)'];
@@ -70,18 +70,18 @@ $actions += ['contact_preference'=>'Preferensi kontak diperbarui','attachment_ad
             <div id="prospectWhatsApp" class="prospect-tab-panel" data-detail-panel>
 <?php if(!empty($conversationPreview)): ?><section class="crm-panel crm-detail-card"><h2>Percakapan pelanggan</h2><p class="crm-footnote">Pesan masuk dan pengiriman CRM untuk nomor prospek ini. Waktu Asia/Jakarta; waktu penerimaan digunakan bila timestamp tidak tersedia.</p><?php $thread=$conversationPreview;$compact=true;require __DIR__.'/../inbox/messages.php'; ?><a class="wa-preview-link" href="<?= e(base_url('inbox').'?lead='.(int)$lead['id']) ?>">Buka percakapan lengkap →</a></section><?php endif ?>
 <section class="crm-panel crm-detail-card">
-                <h2>Pesan WhatsApp</h2>
+                <h2>Tulis pesan WhatsApp</h2><p class="crm-footnote">Ketik pesan langsung atau gunakan template sebagai awal. Perubahan hanya berlaku untuk pengiriman ini.</p><form class="message-composer" data-message-composer data-api="<?= e(base_url('crm/sendWhatsApp')) ?>" data-lead="<?= (int)$lead['id'] ?>" data-phone="<?= e($phone) ?>" data-name="<?= e($lead['shop_name']) ?>" data-token="<?= bin2hex(random_bytes(16)) ?>"><?= csrf_field() ?>
                 <div class="crm-edit-form">
-                    <label>Template pesan<select id="crmDetailTemplate"><?php foreach ($templates as $template): ?><option value="<?= (int)$template['id'] ?>" <?= (int)$template['id'] === $selectedTemplate ? 'selected' : '' ?>><?= e($template['name']) ?></option><?php endforeach; ?></select></label>
-                    <label>Pratinjau pesan<textarea id="crmMessagePreview" rows="8" readonly><?= e($message) ?></textarea></label>
+                    <label>Template pesan<select id="crmDetailTemplate" name="template_id"><option value="0">Pesan bebas — tulis sendiri</option><?php foreach ($templates as $template): ?><option value="<?= (int)$template['id'] ?>" <?= (int)$template['id'] === $selectedTemplate ? 'selected' : '' ?>><?= e($template['name']) ?></option><?php endforeach; ?></select></label>
+                    <label>Isi pesan<textarea id="crmMessagePreview" name="message" rows="5" maxlength="4000" placeholder="Tulis pesan Anda..." required><?= e($message) ?></textarea></label>
                 </div>
                 <div class="crm-detail-actions">
                     <?php if ($gateway['enabled']): ?>
-                    <button type="button" id="crmGatewaySend" class="primary-action" data-token="<?= bin2hex(random_bytes(16)) ?>" <?= !$canContact || !$gateway['enabled'] || !$gateway['has_key'] || !$templates ? 'disabled' : '' ?>>Kirim melalui gateway</button>
+                    <button type="submit" id="crmComposerSend" class="primary-action" data-token="<?= bin2hex(random_bytes(16)) ?>" <?= !$canContact || !$gateway['enabled'] || !$gateway['has_key'] ? 'disabled' : '' ?>>Kirim melalui gateway</button>
                     <?php endif; ?>
                     <a id="crmLeadWhatsApp" class="crm-wa" <?= $canContact ? 'href="' . e('https://wa.me/' . $phone . '?text=' . rawurlencode($message)) . '"' : '' ?> <?= $gateway['enabled'] || !$canContact ? 'hidden' : '' ?> data-manual-hidden="<?= $gateway['enabled'] || $contactBlocked ? '1' : '0' ?>" target="_blank" rel="noopener noreferrer" data-whatsapp="<?= (int)$lead['id'] ?>" data-business="<?= e($lead['shop_name']) ?>" data-project="<?= e($lead['project_name']) ?>" data-phone="<?= e($canContact?$phone:'') ?>">Kirim WhatsApp manual &#8599;</a>
                 </div>
-                <p id="crmGatewayNotice" class="crm-notice" role="status" hidden></p>
+                <p data-send-notice class="crm-notice" role="status" hidden></p></form>
                 <?php if (!$gateway['enabled'] || !$gateway['has_key']): ?><p class="crm-footnote">Untuk mengirim langsung, lengkapi dan aktifkan <a class="crm-text-button" href="<?= base_url('settings') ?>">WhatsApp Gateway</a>.</p><?php else: ?><p class="crm-footnote">Pengirim gateway: <?= e($gateway['sender']) ?></p><?php endif; ?>
                 <?php if (!$canContact): ?><p class="crm-footnote">Nomor WhatsApp belum tersedia atau tidak valid.</p><?php endif; ?>
                 <p class="crm-footnote"><?= $gateway['enabled'] ? 'Pengiriman melalui gateway' : 'Membuka WhatsApp' ?> tidak otomatis mengubah status prospek. Perbarui status setelah menghubungi bisnis.</p>
@@ -117,4 +117,4 @@ $actions += ['contact_preference'=>'Preferensi kontak diperbarui','attachment_ad
 </section>
 <script id="crmTemplatesData" type="application/json"><?= json_encode($templates, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?></script>
 <script src="<?= base_url('assets/js/crm-detail.js?v=1') ?>" defer></script>
-<script src="<?= base_url('assets/js/crm.js?v=delete-2') ?>" defer></script>
+<script src="<?= base_url('assets/js/crm.js?v=free-1-delete-2') ?>" defer></script>

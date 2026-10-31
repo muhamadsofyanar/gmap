@@ -51,8 +51,8 @@ $navIcons = [
     <script src="<?= e(base_url('assets/js/csp-actions.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/account.js?v=1')) ?>" defer></script>
     <script src="<?= e(base_url('assets/js/extras.js?v=2')) ?>" defer></script>
-<?php if(in_array($activeSection,['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/inbox.css?v=1.3.0')) ?>"><?php endif ?>
-</head>
+<?php if(in_array($activeSection,['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/inbox.css?v=1.4.0')) ?>"><?php endif ?>
+<?php if(in_array($activeSection ?? '',['inbox','crm'],true)): ?><link rel="stylesheet" href="<?= e(base_url('assets/css/messaging.css?v=1.4.0')) ?>"><script src="<?= e(base_url('assets/js/message-composer.js?v=1.4.0')) ?>" defer></script><?php endif ?></head>
 <body class="app-shell">
     <a href="#main-content" class="skip-link">Langsung ke konten</a>
     <button id="sidebarBackdrop" class="sidebar-backdrop" type="button" aria-label="Tutup menu navigasi" tabindex="-1" hidden></button>

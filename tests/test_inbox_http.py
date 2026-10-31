@@ -86,6 +86,64 @@ class InboxHTTP(unittest.TestCase):
         self.assertIn('data-conversation-thread',html)
         self.assertNotIn('Device sha256:',html)
         self.assertIn('/team/detail/10',html)
+    def test_free_message_send_and_replay(self):
+        c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        token=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        values=f'id=10&template_id=0&message=Pesan+bebas+tanpa+template&request_token={"e"*32}&_csrf_token={token}'
+        req=Request(self.base+'/crm/sendWhatsApp',data=values.encode(),headers={'Accept':'application/json'})
+        self.assertEqual(json.load(c.open(req))['delivery_status'],'accepted')
+        self.assertEqual(json.load(c.open(req))['delivery_status'],'accepted')
+        with sqlite3.connect(self.db) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM whatsapp_deliveries WHERE request_token=?",('e'*32,)).fetchone()[0],1)
+            self.assertEqual(db.execute("SELECT message FROM whatsapp_deliveries WHERE request_token=?",('e'*32,)).fetchone()[0],'Pesan bebas tanpa template')
+        changed=Request(self.base+'/crm/sendWhatsApp',data=values.replace('Pesan+bebas+tanpa+template','Changed').encode(),headers={'Accept':'application/json'})
+        with self.assertRaises(HTTPError) as ctx:c.open(changed)
+        self.assertEqual(ctx.exception.code,422)
+    def test_selected_broadcast_http(self):
+        c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        token=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        items=json.load(c.open(self.base+'/crm/broadcastRecipients?project_id=1'))['recipients']
+        self.assertTrue(any(item['id']==10 for item in items))
+        values=f'project_id=1&template_id=0&body=Halo&token={"f"*32}&recipient_ids_json=%5B10%5D&selection_count=1&_csrf_token={token}'
+        result=json.load(c.open(Request(self.base+'/crm/prepareBroadcast',data=values.encode(),headers={'Accept':'application/json'})))
+        self.assertEqual(result['broadcast']['eligible'],1)
+        with sqlite3.connect(self.db) as db:
+            batch=json.loads(db.execute('SELECT recipients FROM whatsapp_broadcasts WHERE token=?',('f'*32,)).fetchone()[0])
+            self.assertEqual([r['id'] for r in batch['recipients']],[10])
+    def test_large_selection_json_not_truncated(self):
+        c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        from urllib.parse import urlencode
+        with sqlite3.connect(self.db) as db:db.execute("UPDATE project_leads SET phone='081234567891' WHERE id=11")
+        ids=[10]*1500+[11]
+        values=urlencode({'project_id':1,'template_id':0,'body':'Large selection','token':'8'*32,'recipient_ids_json':json.dumps(ids),'selection_count':len(ids),'_csrf_token':csrf})
+        req=Request(self.base+'/crm/prepareBroadcast',data=values.encode(),headers={'Accept':'application/json'})
+        result=json.load(c.open(req))
+        self.assertEqual(result['broadcast']['eligible'],2)
+    def test_broadcast_requires_explicit_selection(self):
+        c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        for selection in ['', '&recipient_ids[]=13', '&recipient_ids[][]=10']:
+            values=f'project_id=1&template_id=0&body=Halo&token={"9"*32}&_csrf_token={csrf}'+selection
+            with self.assertRaises(HTTPError) as ctx:c.open(Request(self.base+'/crm/prepareBroadcast',data=values.encode(),headers={'Accept':'application/json'}))
+            self.assertEqual(ctx.exception.code,422)
+    def test_member_cannot_send(self):
+        req=Request(self.base+'/crm/sendWhatsApp',data=b'id=10&message=Forbidden',headers={'Accept':'application/json'})
+        with self.assertRaises(HTTPError) as ctx:self.client(2).open(req)
+        self.assertEqual(ctx.exception.code,403)
+        with self.assertRaises(HTTPError) as ctx:self.client(2).open(self.base+'/crm/broadcastRecipients?project_id=1')
+        self.assertEqual(ctx.exception.code,403)
+    def test_z_blocked_contact_cannot_receive_free_text(self):
+        c=self.client(1);html=c.open(self.base+'/inbox?lead=10').read().decode()
+        csrf=re.search(r'name="_csrf_token" value="([a-f0-9]+)"',html).group(1)
+        with sqlite3.connect(self.db) as db:db.execute("INSERT INTO crm_contact_blocks VALUES('phone:6281234567890','stop')")
+        try:
+            req=Request(self.base+'/crm/sendWhatsApp',data=f'id=10&template_id=0&message=Blocked&request_token={"7"*32}&_csrf_token={csrf}'.encode(),headers={'Accept':'application/json'})
+            with self.assertRaises(HTTPError) as ctx:c.open(req)
+            self.assertEqual(ctx.exception.code,422)
+            with sqlite3.connect(self.db) as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM whatsapp_deliveries WHERE request_token=?',('7'*32,)).fetchone()[0],0)
+        finally:
+            with sqlite3.connect(self.db) as db:db.execute("DELETE FROM crm_contact_blocks WHERE contact_key='phone:6281234567890'")
     def test_array_query_is_rejected(self):
         for query in ['lead[]=10','q[]=bad','page[]=1']:
             with self.assertRaises(HTTPError) as ctx:self.client(1).open(self.base+'/inbox?'+query)
@@ -96,6 +154,9 @@ class InboxHTTP(unittest.TestCase):
         self.assertEqual(ctx.exception.code,403)
     def test_admin_crm_urls(self):
         html=self.client(1).open(self.base+'/inbox?lead=10').read().decode()
+        self.assertIn('data-message-composer',html)
+        self.assertIn('name="message"',html)
+        self.assertIn('message-composer.js?v=1.4.0',html)
         self.assertIn('/crm/detail?id=10#prospectWhatsApp',html)
         self.assertIn('/crm/detail?id=10',html)
         self.assertNotIn('/crm/detail/10',html)

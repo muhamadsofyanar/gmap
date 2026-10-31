@@ -107,13 +107,14 @@ class GatewayModel
     public function reserve(string $token, int $leadId, int $templateId, string $number, string $message): array
     {
         $db = Database::getInstance();
-        $stmt = $db->prepare('INSERT IGNORE INTO whatsapp_deliveries (request_token, lead_id, template_id, recipient, message, status) VALUES (?, ?, ?, ?, ?, \'pending\')');
+        $prefix=$db->getAttribute(\PDO::ATTR_DRIVER_NAME)==='sqlite'?'INSERT OR IGNORE':'INSERT IGNORE';
+        $stmt = $db->prepare($prefix.' INTO whatsapp_deliveries (request_token, lead_id, template_id, recipient, message, status) VALUES (?, ?, ?, ?, ?, \'pending\')');
         $stmt->execute([$token, $leadId, $templateId, $number, $message]);
         $created = $stmt->rowCount() === 1;
         $find = $db->prepare('SELECT * FROM whatsapp_deliveries WHERE request_token = ?');
         $find->execute([$token]);
         $row = $find->fetch();
-        if ((int)$row['lead_id'] !== $leadId || (int)$row['template_id'] !== $templateId) throw new \InvalidArgumentException('Permintaan pengiriman tidak cocok. Muat ulang halaman.');
+        if ((int)$row['lead_id'] !== $leadId || (int)$row['template_id'] !== $templateId || $row['recipient'] !== $number || $row['message'] !== $message) throw new \InvalidArgumentException('Permintaan pengiriman tidak cocok. Muat ulang halaman.');
         return ['created' => $created, 'delivery' => $row];
     }
 

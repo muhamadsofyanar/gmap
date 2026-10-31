@@ -15,7 +15,7 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
     <a class="crm-back" href="<?= base_url('crm') ?>">&larr; Semua proyek CRM</a>
     <header class="page-heading">
         <div><p class="eyebrow">CRM PROYEK</p><h1><?= e($project['name']) ?></h1><p><?= e($project['keyword']) ?> &middot; <?= e($project['location']) ?> &middot; <?= number_format($stats['total_leads'] ?? 0) ?> prospek di CRM</p></div>
-        <button type="button" id="crmBroadcastOpen" class="primary-action" <?= !$templates || !(int)($stats['total_leads'] ?? 0) ? 'disabled title="Buat template pesan dan tambahkan prospek ke CRM terlebih dahulu"' : '' ?>>Broadcast WhatsApp</button>
+        <button type="button" id="crmBroadcastOpen" class="primary-action" <?= !(int)($stats['total_leads'] ?? 0) ? 'disabled title="Tambahkan prospek ke CRM terlebih dahulu"' : '' ?>>Broadcast WhatsApp</button>
     </header>
     <p id="crmNotice" class="crm-notice" role="status" hidden></p>
     <nav class="crm-view-switch" aria-label="Tampilan CRM">
@@ -29,12 +29,13 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
         </header>
         <div class="crm-dialog-body">
             <section id="crmBroadcastCompose" class="broadcast-compose">
-                <label for="crmMessageTemplate">Template pesan</label>
-                <select id="crmMessageTemplate"><?php foreach ($templates as $template): ?><option value="<?= (int)$template['id'] ?>"><?= e($template['name']) ?></option><?php endforeach; ?></select>
+                <section class="broadcast-recipients" aria-labelledby="broadcastRecipientsTitle"><div class="broadcast-selection-heading"><div><h3 id="broadcastRecipientsTitle">Pilih penerima</h3><p>Centang kontak yang akan menerima pesan.</p></div><strong id="broadcastSelectionCount" aria-live="polite">0 dipilih</strong></div><input type="search" id="broadcastRecipientSearch" placeholder="Cari nama atau nomor..." aria-label="Cari penerima"><div class="broadcast-selection-tools"><button type="button" id="broadcastSelectVisible">Pilih hasil pencarian</button><button type="button" id="broadcastClearSelection">Kosongkan pilihan</button><button type="button" id="broadcastReloadRecipients">Muat ulang daftar</button></div><div id="broadcastRecipientList" class="broadcast-recipient-list" aria-live="polite"><p>Buka dialog untuk memuat kontak.</p></div></section>
+                <label for="crmMessageTemplate">Gunakan template (opsional)</label>
+                <select id="crmMessageTemplate"><option value="0">Pesan bebas — tulis sendiri</option><?php foreach ($templates as $template): ?><option value="<?= (int)$template['id'] ?>"><?= e($template['name']) ?></option><?php endforeach; ?></select>
                 <label for="crmBroadcastBody">Isi pesan <small>periksa sekali lagi sebelum dikirim</small></label>
                 <textarea id="crmBroadcastBody" rows="8" maxlength="4000" spellcheck="true"></textarea>
                 <p class="crm-footnote">{{nama_bisnis}} dan {{nama_projek}} otomatis diganti untuk setiap penerima.</p>
-                <label class="broadcast-save" id="crmBroadcastSaveRow" hidden><input type="checkbox" id="crmBroadcastSave" checked> Simpan perubahan ini ke template</label>
+                <label class="broadcast-save" id="crmBroadcastSaveRow" hidden><input type="checkbox" id="crmBroadcastSave"> Simpan perubahan ini ke template</label>
                 <label class="broadcast-save"><input type="checkbox" id="crmBroadcastMarkContacted" checked> Ubah status prospek <strong>Belum dihubungi</strong> menjadi <strong>Dihubungi</strong> setelah pesan diterima gateway</label>
                 <p id="crmBroadcastComposeNotice" class="crm-notice" data-state="error" role="alert" hidden></p>
                 <div class="crm-detail-actions">
@@ -43,7 +44,7 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
                 </div>
             </section>
             <section id="crmBroadcastPanel" class="broadcast-progress" aria-label="Progres broadcast" hidden>
-                <p class="crm-footnote">Mencakup semua prospek CRM dalam proyek ini, tanpa mengikuti filter atau halaman tabel. Nomor tidak valid dilewati dan nomor duplikat hanya menerima satu pesan.</p>
+                <p class="crm-footnote">Hanya kontak yang Anda pilih yang disiapkan untuk broadcast. Nomor tidak valid dilewati dan nomor duplikat hanya menerima satu pesan.</p>
                 <p id="crmBroadcastSummary" role="status"></p>
                 <details><summary>Contoh pesan penerima pertama</summary><p id="crmBroadcastPreview" class="template-preview"></p></details>
                 <progress id="crmBroadcastProgress" value="0" max="1" aria-label="Progres broadcast"></progress>
@@ -112,5 +113,5 @@ foreach ($stages as $key => $stage) $chips[] = [$stage['label'], (int)($stats['s
 </section>
 
 <script id="crmTemplatesData" type="application/json"><?= json_encode($templates, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?></script>
-<script src="<?= base_url('assets/js/crm.js?v=delete-2') ?>" defer></script>
-<script src="<?= base_url('assets/js/crm-broadcast.js?v=dialog-2') ?>" defer></script>
+<script src="<?= base_url('assets/js/crm.js?v=free-1.4') ?>" defer></script>
+<script src="<?= base_url('assets/js/crm-broadcast.js?v=selected-1.4') ?>" defer></script>

@@ -30,58 +30,17 @@
     });
     detailTemplateSelect?.addEventListener('change', () => {
         document.getElementById('crmMessagePreview').value = updateMessage(document.getElementById('crmLeadWhatsApp'), detailTemplateSelect.value);
+        document.getElementById('crmMessagePreview').dispatchEvent(new Event('input',{bubbles:true}));
     });
     if (templateSelect) updateDetailLinks();
     if (detailTemplateSelect) document.getElementById('crmMessagePreview').value = updateMessage(document.getElementById('crmLeadWhatsApp'), detailTemplateSelect.value);
     if (templateSelect) workspace.querySelectorAll('[data-whatsapp]').forEach(link => updateMessage(link, templateSelect.value));
 
-    const gatewayButton = document.getElementById('crmGatewaySend');
-    gatewayButton?.addEventListener('click', async () => {
-        if (gatewayButton.disabled) return;
-        const link = document.getElementById('crmLeadWhatsApp');
-        const message = document.getElementById('crmMessagePreview').value;
-        if (!window.confirm(`Kirim pesan ini ke ${link.dataset.business} (${link.dataset.phone}) melalui gateway?\n\n${message}`)) return;
-        const status = document.getElementById('crmGatewayNotice');
-        gatewayButton.disabled = true;
-        detailTemplateSelect.disabled = true;
-        gatewayButton.textContent = 'Mengirim...';
-        status.hidden = false;
-        status.textContent = 'Menunggu hasil dari gateway...';
-        try {
-            const result = await request('sendWhatsApp', {
-                id: link.dataset.whatsapp, template_id: detailTemplateSelect.value,
-                request_token: gatewayButton.dataset.token, message
-            });
-            status.textContent = result.message;
-            status.textContent += result.delivery_status === 'accepted'
-                ? ' Muat ulang halaman jika ingin menyiapkan pesan berikutnya.'
-                : ' Setelah memeriksa hasil di dashboard gateway, muat ulang halaman jika perlu mencoba lagi.';
-            gatewayButton.textContent = result.delivery_status === 'accepted' ? 'Diterima gateway' : 'Permintaan diproses';
-            try {
-                const data = await request(`getLead?id=${encodeURIComponent(link.dataset.whatsapp)}`);
-                const list = document.getElementById('crmGatewayHistory');
-                list.replaceChildren();
-                const labels = { pending: 'Menunggu hasil / perlu diperiksa', accepted: 'Diterima gateway', failed: 'Ditolak gateway', unknown: 'Hasil belum pasti', skipped: 'Dilewati karena data prospek berubah' };
-                (data.deliveries || []).forEach(delivery => {
-                    const item = document.createElement('li');
-                    const title = document.createElement('strong');
-                    title.textContent = labels[delivery.status] || labels.unknown;
-                    const date = document.createElement('small');
-                    date.textContent = `${delivery.created_at} · ${delivery.recipient}`;
-                    const body = document.createElement('p');
-                    body.textContent = delivery.message;
-                    item.append(title, date, body);
-                    list.append(item);
-                });
-            } catch (_) { status.textContent += ' Muat ulang halaman untuk melihat riwayat terbaru.'; }
-        } catch (error) {
-            status.textContent = `${error.message} Jika permintaan sudah terkirim, periksa riwayat di dashboard gateway sebelum mengirim ulang.`;
-            gatewayButton.textContent = 'Periksa hasil pengiriman';
-        } finally {
-            detailTemplateSelect.disabled = false;
-        }
+    const editor = document.getElementById('crmMessagePreview');
+    editor?.addEventListener('input', () => {
+        const link=document.getElementById('crmLeadWhatsApp');
+        if(link?.dataset.phone)link.href=`https://wa.me/${link.dataset.phone}?text=${encodeURIComponent(editor.value)}`;
     });
-
     function showError(message, state = 'error') {
         const target = notice;
         target.dataset.state = state;

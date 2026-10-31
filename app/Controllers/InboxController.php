@@ -35,10 +35,12 @@ final class InboxController extends Controller
             $context=$thread['context'] ?? null;
             $options=$this->conversations->options($this->actor);
             $candidates=$context && !$context['lead_id'] && $context['phone'] && $this->actor['role']==='admin' ? $this->repo->linkCandidates($this->actor,$context['anchor']):[];
+            $replyGateway=$this->actor['role']==='admin' && $context && $context['lead_id']?(new \App\Models\GatewayModel())->settings():null;
+            $replyBlocked=$context && $context['lead_id']?\App\Models\ContactPolicy::blocked($context['lead']):false;
             $this->view('inbox/index',[
                 'pageTitle'=>'Kotak masuk · '.APP_NAME,'activeSection'=>'inbox','isAdmin'=>$this->actor['role']==='admin',
                 'filter'=>$filter,'page'=>$page,'historyPage'=>$historyPage,'search'=>$search,'groups'=>$groups,'thread'=>$thread,'context'=>$context,
-                'options'=>$options,'candidates'=>$candidates,'reminderTotal'=>$this->conversations->reminderCount($this->actor),
+                'replyGateway'=>$replyGateway,'replyBlocked'=>$replyBlocked,'options'=>$options,'candidates'=>$candidates,'reminderTotal'=>$this->conversations->reminderCount($this->actor),
             ]);
         } catch(\InvalidArgumentException $e){$this->json(['success'=>false,'message'=>$e->getMessage()],422);}
     }
